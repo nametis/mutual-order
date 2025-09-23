@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>Commande {{ order.seller_name }} - Mutual Order</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .mutual-header {
+      background-color: #0d6efd;
+      padding: 0.75rem 0;
+      margin-bottom: 2rem;
+    }
+    .admin-badge {
+      font-size: 0.9em;
+      margin-left: 0.3rem;
+    }
+    .listing-table {
+      margin-bottom: 2rem;
+    }
+    .remove-btn {
+      display: block;
+      width: 100%;
+      background-color: inherit;
+      border: none;
+      padding: 0.5rem;
+      border-radius: 0.25rem;
+      text-align: center;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .remove-btn:hover {
+      background-color: #e9ecef;
+    }
+    .right-panel {
+      background-color: #f8f9fa;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      height: fit-content;
+      position: sticky;
+      top: 2rem;
+    }
+    .panel-section {
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid #dee2e6;
+    }
+    .panel-section:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+    .share-btn {
+      position: relative;
+    }
+    .share-tooltip {
+      position: absolute;
+      top: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #28a745;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 1000;
+    }
+    .share-tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: #28a745 transparent transparent transparent;
+    }
+    .share-tooltip.show {
+      opacity: 1;
+    }
+    .progress-bar-custom {
+      height: 20px;
+    }
+    .deadline-badge {
+      font-size: 0.8em;
+    }
+  </style>
+</head>
+<body>
+  <!-- Mutual Order Header -->
+  <div class="mutual-header">
+    <div class="container-fluid">
+      <div class="d-flex justify-content-between align-items-center">
+        <a href="{{ url_for('index') }}" class="text-white text-decoration-none">
+          <h4 class="mb-0">MUTUAL ORDER 0.1</h4>
+        </a>
+        <div class="d-flex align-items-center gap-3 text-white">
+          <span>{{ current_user.username }}</span>
+          <a href="{{ url_for('logout') }}" class="btn btn-light btn-sm">Déconnexion</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Main Content -->
+      <div class="col-lg-8">
+        <!-- Order Title with buttons -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h2>Commande chez {{ order.seller_name }}</h2>
+          <div class="d-flex gap-2">
+            <button class="btn btn-outline-success share-btn" onclick="shareOrder()">
+              🔗 Partager
+              <div class="share-tooltip" id="shareTooltip">Lien copié !</div>
+            </button>
+            <a href="{{ url_for('verify_order_availability', order_id=order.id) }}" 
+               class="btn btn-outline-info"
+               onclick="return confirm('Vérifier la disponibilité de tous les disques ? Cela peut prendre quelques secondes.')">
+              🔄 Vérifier
+            </a>
+            {% if order.creator_id == current_user.id %}
+            <a href="{{ url_for('delete_order', order_id=order.id) }}" 
+               class="btn btn-outline-danger"
+               onclick="return confirm('Supprimer cette commande ?')">Supprimer</a>
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="mb-4">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <small class="text-muted">
+                Créée par <strong>{{ order.creator.username }} 👑</strong>
+                {% if order.creator_id == current_user.id %}(vous){% endif %}
+                le {{ utc_to_paris(order.created_at).strftime('%d/%m/%Y à %H:%M') }}
+              </small>
+            </div>
+            <div>
+              {% set status_badges = {
+                'building': {'class': 'bg-secondary', 'text': '🔨 Construction'},
+                'validation': {'class': 'bg-warning', 'text': '⏳ Validation'},
+                'ordered': {'class': 'bg-info', 'text': '📦 Commandé'},
+                'delivered': {'class': 'bg-success', 'text': '✅ Livré'},
+                'closed': {'class': 'bg-dark', 'text': '🔒 Fermé'}
+              } %}
+              <span class="badge {{ status_badges[order.status].class }} fs-6">
+                {{ status_badges[order.status].text }}
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ 'danger' if category == 'danger' else 'warning' if category == 'warning' else 'info' if category == 'info' else 'success' }}">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+        
+        <!-- Available Listings Table -->
+        {% if available_listings %}
+        {% set sorted_listings = available_listings|sort(attribute='user.username') %}
+        {% set my_listings = sorted_listings|selectattr('user_id', 'equalto', current_user.id)|list %}
+        {% set other_listings = sorted_listings|rejectattr('user_id', 'equalto', current_user.id)|list %}
+
+        <!-- My Listings -->
+        {% if my_listings %}
+        <h4 class="mt-4">Mes disques</h4>
+        <table class="table table-striped align-middle listing-table">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 100px;">Pochette</th>
+              <th>Titre</th>
+              <th style="width: 120px;">Prix</th>
+              <th style="width: 120px;">État Vinyle</th>
+              <th style="width: 120px;">État Pochette</th>
+              <th style="width: 160px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for listing in my_listings %}
+            <tr>
+              <td>
+                {% if listing.image_url %}
+                  <img src="{{ listing.image_url }}" alt="cover" style="max-height: 80px; max-width: 80px;" class="rounded">
+                {% else %}
+                  <div class="text-muted text-center" style="height: 60px; display: flex; align-items: center; justify-content: center; border: 1px solid #dee2e6; border-radius: 0.25rem;">
+                    Pas d'image
+                  </div>
+                {% endif %}
+              </td>
+              <td>
+                <strong>{{ listing.title }}</strong><br>
+                <small class="text-muted">ID: {{ listing.discogs_id }}</small><br>
+                <small class="text-muted">Ajouté le {{ listing.added_at.strftime('%d/%m/%Y') }}</small>
+                {% if listing.last_checked %}
+                <br><small class="text-success">Vérifié le {{ listing.last_checked.strftime('%d/%m/%Y à %H:%M') }}</small>
+                {% endif %}
+              </td>
+              <td>{{ "%.2f"|format(listing.price_value) }} {{ listing.currency }}</td>
+              <td><span class="badge bg-{{ 'success' if listing.media_condition == 'Mint (M)' else 'primary' if 'Near Mint' in listing.media_condition else 'warning' if 'Very Good' in listing.media_condition else 'secondary' }}">{{ listing.media_condition }}</span></td>
+              <td><span class="badge bg-{{ 'success' if listing.sleeve_condition == 'Mint (M)' else 'primary' if 'Near Mint' in listing.sleeve_condition else 'warning' if 'Very Good' in listing.sleeve_condition else 'secondary' }}">{{ listing.sleeve_condition }}</span></td>
+              <td>
+                <div class="d-flex flex-column gap-1">
+                  <a href="{{ listing.listing_url }}" 
+                     target="_blank" 
+                     class="btn btn-outline-primary btn-sm">
+                    🔗 Voir sur Discogs
+                  </a>
+                  <a href="{{ url_for('delete_listing', listing_id=listing.id) }}" 
+                     class="btn btn-outline-danger btn-sm"
+                     onclick="return confirm('Retirer de la commande ?');">
+                    🗑️ Retirer
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <!-- Subtotal for My Listings -->
+        {% set my_total = my_listings | map(attribute='price_value') | sum %}
+        <div class="alert alert-secondary text-center">
+          <strong>Sous-total de mes disques : {{ "%.2f"|format(my_total) }} {{ order.currency }}</strong>
+        </div>
+        {% endif %}
+
+        <!-- Other Users' Listings -->
+        {% if other_listings %}
+        <h4 class="mt-5">Les autres disques de la commande</h4>
+        <table class="table table-striped align-middle listing-table">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 100px;">Pochette</th>
+              <th>Titre</th>
+              <th style="width: 120px;">Prix</th>
+              <th style="width: 120px;">État Vinyle</th>
+              <th style="width: 120px;">État Pochette</th>
+              <th style="width: 140px;">Ajouté par</th>
+              <th style="width: 120px;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for listing in other_listings %}
+            <tr>
+              <td>
+                {% if listing.image_url %}
+                  <img src="{{ listing.image_url }}" alt="cover" style="max-height: 80px; max-width: 80px;" class="rounded">
+                {% else %}
+                  <div class="text-muted text-center" style="height: 60px; display: flex; align-items: center; justify-content: center; border: 1px solid #dee2e6; border-radius: 0.25rem;">
+                    Pas d'image
+                  </div>
+                {% endif %}
+              </td>
+              <td>
+                <strong>{{ listing.title }}</strong><br>
+                <small class="text-muted">ID: {{ listing.discogs_id }}</small><br>
+                <small class="text-muted">Ajouté le {{ listing.added_at.strftime('%d/%m/%Y') }}</small>
+                {% if listing.last_checked %}
+                <br><small class="text-success">Vérifié le {{ listing.last_checked.strftime('%d/%m/%Y à %H:%M') }}</small>
+                {% endif %}
+              </td>
+              <td>{{ "%.2f"|format(listing.price_value) }} {{ listing.currency }}</td>
+              <td><span class="badge bg-{{ 'success' if listing.media_condition == 'Mint (M)' else 'primary' if 'Near Mint' in listing.media_condition else 'warning' if 'Very Good' in listing.media_condition else 'secondary' }}">{{ listing.media_condition }}</span></td>
+              <td><span class="badge bg-{{ 'success' if listing.sleeve_condition == 'Mint (M)' else 'primary' if 'Near Mint' in listing.sleeve_condition else 'warning' if 'Very Good' in listing.sleeve_condition else 'secondary' }}">{{ listing.sleeve_condition }}</span></td>
+              <td>
+                <strong>{{ listing.user.username }}</strong>
+                {% if listing.user_id == order.creator_id %}<span class="admin-badge">👑</span>{% endif %}
+              </td>
+              <td>
+                <a href="{{ listing.listing_url }}" 
+                   target="_blank" 
+                   class="btn btn-outline-primary btn-sm px-2 py-1" 
+                   style="font-size: 0.75rem; white-space: nowrap;">
+                  🔗 Discogs
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+
+        <!-- Enhanced Recap with Shipping -->
+        <div class="mt-5">
+          <h4 class="mb-3">Récapitulatif détaillé de la commande</h4>
+
+          <table class="table table-bordered text-center align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Participant</th>
+                <th>Nombre de disques</th>
+                <th>Montant disques</th>
+                <th>Part expédition</th>
+                <th>Part taxes</th>
+                <th>Total à payer</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Always include creator first, even if no listings -->
+              {% set creator_items = available_listings|selectattr('user_id', 'equalto', order.creator_id)|list %}
+              {% set creator_subtotal = creator_items | map(attribute='price_value') | sum %}
+              {% set creator_items_count = creator_items|length %}
+              {% set total_items = available_listings | length %}
+              {% set creator_shipping_share = (order.shipping_cost * creator_items_count / total_items) if total_items > 0 else 0 %}
+              {% set creator_tax_share = (order.taxes * creator_items_count / total_items) if total_items > 0 else 0 %}
+              {% set creator_total = creator_subtotal + creator_shipping_share + creator_tax_share %}
+              
+              <tr class="table-info">
+                <td>
+                  <strong>{{ order.creator.username }} 👑</strong>
+                  {% if order.creator_id == current_user.id %} <small class="text-muted">(vous)</small>{% endif %}
+                  <small class="text-muted d-block">Créateur</small>
+                </td>
+                <td>{{ creator_items_count }}</td>
+                <td>{{ "%.2f"|format(creator_subtotal) }} {{ order.currency }}</td>
+                <td>{{ "%.2f"|format(creator_shipping_share) }} {{ order.currency }}</td>
+                <td>{{ "%.2f"|format(creator_tax_share) }} {{ order.currency }}</td>
+                <td><strong>{{ "%.2f"|format(creator_total) }} {{ order.currency }}</strong></td>
+              </tr>
+              
+              <!-- Other participants -->
+              {% for user_id, items in available_listings|groupby('user_id') %}
+              {% if user_id != order.creator_id %}
+              {% set subtotal = items | map(attribute='price_value') | sum %}
+              {% set user_items_count = items|length %}
+              {% set shipping_share = (order.shipping_cost * user_items_count / total_items) if total_items > 0 else 0 %}
+              {% set tax_share = (order.taxes * user_items_count / total_items) if total_items > 0 else 0 %}
+              {% set user_total = subtotal + shipping_share + tax_share %}
+              <tr>
+                <td>
+                  <strong>{{ items[0].user.username }}</strong>
+                  {% if user_id == current_user.id %} <small class="text-muted">(vous)</small>{% endif %}
+                </td>
+                <td>{{ user_items_count }}</td>
+                <td>{{ "%.2f"|format(subtotal) }} {{ order.currency }}</td>
+                <td>{{ "%.2f"|format(shipping_share) }} {{ order.currency }}</td>
+                <td>{{ "%.2f"|format(tax_share) }} {{ order.currency }}</td>
+                <td><strong>{{ "%.2f"|format(user_total) }} {{ order.currency }}</strong></td>
+              </tr>
+              {% endif %}
+              {% endfor %}
+              
+              <tr class="table-primary">
+                <td><strong>Total</strong></td>
+                <td><strong>{{ available_listings | length }}</strong></td>
+                <td><strong>{{ "%.2f"|format(order.total_price) }} {{ order.currency }}</strong></td>
+                <td><strong>{{ "%.2f"|format(order.shipping_cost) }} {{ order.currency }}</strong></td>
+                <td><strong>{{ "%.2f"|format(order.taxes) }} {{ order.currency }}</strong></td>
+                <td><strong>{{ "%.2f"|format(order.total_with_fees) }} {{ order.currency }}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Right Panel -->
+      <div class="col-lg-4">
+        <div class="right-panel">
+          
+          <!-- Add Listing Form -->
+          <div class="panel-section">
+            <h6 class="mb-3">➕ Ajouter un disque</h6>
+            <form method="POST" action="{{ url_for('add_listing_to_order', order_id=order.id) }}">
+              <div class="mb-2">
+                <input type="url" name="listing_url" class="form-control form-control-sm"
+                       placeholder="URL annonce Discogs..." required>
+              </div>
+              <button type="submit" class="btn btn-success btn-sm w-100">Ajouter à la commande</button>
+            </form>
+            <small class="text-muted mt-1 d-block">
+              Ajoutez une annonce de {{ order.seller_name }}
+            </small>
+          </div>
+
+          <!-- Workflow Management -->
+          <div class="panel-section">
+            <h6 class="mb-3">📋 Gestion du workflow</h6>
+            
+            {% if order.status == 'building' %}
+              {% if order.creator_id == current_user.id or current_user.is_admin %}
+                <form method="POST" action="{{ url_for('validate_order', order_id=order.id) }}" class="mb-2">
+                  <button type="submit" class="btn btn-success btn-sm w-100"
+                          onclick="return confirm('Valider cette commande et passer en phase de validation ?')">
+                    ✅ Valider la commande
+                  </button>
+                </form>
+                <small class="text-muted">Une fois validée, les participants pourront confirmer leurs montants.</small>
+              {% else %}
+                <p class="text-muted small mb-0">En attente de validation par le créateur ({{ order.creator.username }}).</p>
+              {% endif %}
+              
+            {% elif order.status == 'validation' %}
+              <div class="mb-3">
+                <h6 class="small">Validations individuelles:</h6>
+                {% for participant in order.participants %}
+                  {% set validation = order.validations|selectattr('user_id', 'equalto', participant.id)|first %}
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="small">
+                      {{ participant.username }}
+                      {% if participant.id == order.creator_id %}👑{% endif %}
+                    </span>
+                    {% if validation and validation.validated %}
+                      <span class="badge bg-success">✅</span>
+                    {% else %}
+                      <span class="badge bg-secondary">⏳</span>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+              
+              <!-- User validation button -->
+              {% set user_validation = order.validations|selectattr('user_id', 'equalto', current_user.id)|first %}
+              {% if current_user in order.participants %}
+                {% if not user_validation or not user_validation.validated %}
+                  <form method="POST" action="{{ url_for('user_validate_order', order_id=order.id) }}" class="mb-2">
+                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                      ✅ Valider ma participation
+                    </button>
+                  </form>
+                {% else %}
+                  <div class="alert alert-success py-2 px-3 small mb-2">
+                    Vous avez validé votre participation
+                  </div>
+                {% endif %}
+              {% endif %}
+              
+              <!-- Creator actions -->
+              {% if order.creator_id == current_user.id or current_user.is_admin %}
+                <div class="mt-2">
+                  <form method="POST" action="{{ url_for('change_order_status', order_id=order.id, new_status='ordered') }}" class="mb-1">
+                    <button type="submit" class="btn btn-info btn-sm w-100"
+                            onclick="return confirm('Marquer comme commandé chez le vendeur ?')">
+                      📦 Marquer comme commandé
+                    </button>
+                  </form>
+                  {% if order.all_participants_validated %}
+                    <small class="text-success">Tous les participants ont validé !</small>
+                  {% else %}
+                    <small class="text-warning">En attente de validations</small>
+                  {% endif %}
+                </div>
+              {% endif %}
+              
+            {% elif order.status == 'ordered' %}
+              {% if order.creator_id == current_user.id or current_user.is_admin %}
+                <form method="POST" action="{{ url_for('change_order_status', order_id=order.id, new_status='delivered') }}" class="mb-2">
+                  <button type="submit" class="btn btn-success btn-sm w-100"
+                          onclick="return confirm('Marquer comme livré ?')">
+                    🚚 Marquer comme livré
+                  </button>
+                </form>
+              {% endif %}
+              <p class="text-info small mb-0">Commande passée chez {{ order.seller_name }}. En attente de livraison.</p>
+              
+            {% elif order.status == 'delivered' %}
+              {% if order.creator_id == current_user.id or current_user.is_admin %}
+                <form method="POST" action="{{ url_for('change_order_status', order_id=order.id, new_status='closed') }}" class="mb-2">
+                  <button type="submit" class="btn btn-dark btn-sm w-100"
+                          onclick="return confirm('Fermer définitivement cette commande ?')">
+                    🔒 Fermer la commande
+                  </button>
+                </form>
+              {% endif %}
+              <p class="text-success small mb-0">Commande livrée ! Vous pouvez la fermer une fois tout distribué.</p>
+              
+            {% elif order.status == 'closed' %}
+              <div class="alert alert-dark py-2 px-3 small mb-0">
+                🔒 Commande fermée
+              </div>
+            {% endif %}
+            
+            <!-- Admin override buttons -->
+            {% if current_user.is_admin %}
+              <hr class="my-2">
+              <small class="text-warning">Admin - Changer statut:</small>
+              <div class="btn-group-vertical w-100 mt-1">
+                <form method="POST" action="{{ url_for('change_order_status', order_id=order.id, new_status='building') }}" class="mb-1">
+                  <button type="submit" class="btn btn-outline-secondary btn-sm w-100">🔨 Construction</button>
+                </form>
+                <form method="POST" action="{{ url_for('change_order_status', order_id=order.id, new_status='validation') }}" class="mb-1">
+                  <button type="submit" class="btn btn-outline-warning btn-sm w-100">⏳ Validation</button>
+                </form>
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Order Management Info -->
+          <div class="panel-section">
+            <h5 class="mb-3">📊 Gestion de la commande</h5>
+            
+            <!-- Progress Bar -->
+            {% if order.max_amount %}
+            {% set progress_percentage = ((order.total_price / order.max_amount) * 100) if order.max_amount > 0 else 0 %}
+            <div class="mb-3">
+              <div class="d-flex justify-content-between mb-1">
+                <small>Progression vers l'objectif</small>
+                <small>{{ "%.1f"|format(progress_percentage) }}%</small>
+              </div>
+              <div class="progress progress-bar-custom">
+                <div class="progress-bar bg-{{ 'success' if progress_percentage >= 100 else 'primary' }}" 
+                     style="width: {{ progress_percentage if progress_percentage <= 100 else 100 }}%"></div>
+              </div>
+              <small class="text-muted">
+                {{ "%.2f"|format(order.total_price) }} / {{ "%.2f"|format(order.max_amount) }} {{ order.currency }}
+              </small>
+            </div>
+            {% endif %}
+
+            <ul class="list-unstyled">
+              {% if order.max_amount %}
+              <li><strong>💰 Montant maximum :</strong> {{ "%.2f"|format(order.max_amount) }} {{ order.currency }}</li>
+              {% endif %}
+              
+              {% if order.contributed_amount > 0 or order.contributed_percentage > 0 %}
+              <li><strong>💳 Déjà engagé :</strong> 
+                {{ "%.2f"|format(order.contributed_amount) }} {{ order.currency }}
+                {% if order.contributed_percentage > 0 %}({{ "%.1f"|format(order.contributed_percentage) }}%){% endif %}
+              </li>
+              {% endif %}
+              
+              {% if order.deadline %}
+              <li>
+                <strong>📅 Date limite :</strong> 
+                {{ order.deadline.strftime('%d/%m/%Y') }}
+                {% set current_date = now().date() %}
+                {% set deadline_date = order.deadline.date() %}
+                {% set days_left = (deadline_date - current_date).days %}
+                {% if days_left > 0 %}
+                  <span class="badge bg-success deadline-badge">{{ days_left }} jours restants</span>
+                {% elif days_left == 0 %}
+                  <span class="badge bg-warning deadline-badge">Aujourd'hui !</span>
+                {% else %}
+                  <span class="badge bg-danger deadline-badge">Dépassée</span>
+                {% endif %}
+              </li>
+              {% endif %}
+              
+              <li><strong>💵 Paiement :</strong> {{ order.payment_timing }}</li>
+              
+              {% if order.shipping_cost > 0 %}
+              <li><strong>📦 Frais de port :</strong> {{ "%.2f"|format(order.shipping_cost) }} {{ order.currency }}</li>
+              {% endif %}
+              
+              {% if order.taxes > 0 %}
+              <li><strong>🧾 Taxes :</strong> {{ "%.2f"|format(order.taxes) }} {{ order.currency }}</li>
+              {% endif %}
+            </ul>
+          </div>
+
+          <!-- Creator-only Fees Management -->
+          {% if order.creator_id == current_user.id %}
+          <div class="panel-section">
+            <h6 class="mb-3">⚙️ Gestion des frais (créateur)</h6>
+            <form method="POST" action="{{ url_for('update_order_fees', order_id=order.id) }}">
+              <div class="mb-2">
+                <label for="shipping_cost" class="form-label">Frais de port ({{ order.currency }})</label>
+                <input type="number" class="form-control form-control-sm" id="shipping_cost" name="shipping_cost" 
+                       step="0.01" min="0" value="{{ order.shipping_cost }}">
+              </div>
+              <div class="mb-3">
+                <label for="taxes" class="form-label">Taxes ({{ order.currency }})</label>
+                <input type="number" class="form-control form-control-sm" id="taxes" name="taxes" 
+                       step="0.01" min="0" value="{{ order.taxes }}">
+              </div>
+              <button type="submit" class="btn btn-success btn-sm w-100">Mettre à jour les frais</button>
+            </form>
+          </div>
+          {% endif %}
+
+          <!-- Seller Information -->
+          <div class="panel-section">
+            <h6 class="mb-3">🏪 Informations vendeur</h6>
+            <ul class="list-unstyled">
+              <li><strong>📍 Localisation :</strong> {{ seller_info.location }}</li>
+              {% if seller_info.rating %}
+              <li><strong>⭐ Note :</strong> 
+                {{ "%.1f"|format(seller_info.rating) }}/5
+                {% if seller_info.rating_count > 0 %}
+                  ({{ seller_info.rating_count }} avis)
+                {% endif %}
+              </li>
+              {% endif %}
+            </ul>
+            
+            <div class="d-grid gap-2">
+              <a href="https://www.discogs.com/user/{{ order.seller_name }}" 
+                 target="_blank" class="btn btn-outline-primary btn-sm">
+                👤 Profil complet
+              </a>
+              
+              {% if order.seller_shop_url %}
+              <a href="{{ order.seller_shop_url }}" 
+                 target="_blank" class="btn btn-outline-success btn-sm">
+                🏪 Boutique directe
+              </a>
+              {% else %}
+              <a href="https://www.discogs.com/seller/{{ order.seller_name }}/profile" 
+                 target="_blank" class="btn btn-outline-success btn-sm">
+                🏪 Autres disques en vente
+              </a>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Participants Info -->
+          <div class="panel-section">
+            <h6 class="mb-3">👥 Participants ({{ order.participants_count }})</h6>
+            <div class="d-flex flex-wrap gap-1">
+              {% for participant in order.participants %}
+                <span class="badge bg-{{ 'primary' if participant.id == order.creator_id else 'secondary' }}">
+                  {{ participant.username }}
+                  {% if participant.id == order.creator_id %}👑{% endif %}
+                </span>
+              {% endfor %}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <script>
+    function shareOrder() {
+      const url = window.location.href;
+      const tooltip = document.getElementById('shareTooltip');
+      
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(url).then(function() {
+          showTooltip();
+        }, function(err) {
+          fallbackCopyTextToClipboard(url);
+        });
+      } else {
+        fallbackCopyTextToClipboard(url);
+      }
+      
+      function fallbackCopyTextToClipboard(text) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.top = "0";
+        textArea.style.left = "0";
+        textArea.style.position = "fixed";
+        
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+          const successful = document.execCommand('copy');
+          if (successful) {
+            showTooltip();
+          }
+        } catch (err) {
+          console.error('Fallback: Oops, unable to copy', err);
+        }
+        
+        document.body.removeChild(textArea);
+      }
+      
+      function showTooltip() {
+        tooltip.classList.add('show');
+        setTimeout(() => {
+          tooltip.classList.remove('show');
+        }, 2000);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MUTUAL ORDER - Créer une commande</title>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>[x-cloak] { display: none !important; }</style>
+</head>
+<body class="bg-gray-50">
+    <div x-data="createOrderApp()" class="min-h-screen">
+        <header class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <h1 class="text-xl font-bold text-blue-600">MUTUAL ORDER 0.4</h1>
+                    <a href="/" class="text-blue-600 hover:text-blue-800">← Dashboard</a>
+                </div>
+                <a href="/logout" class="text-blue-600 hover:text-blue-800">Déconnexion</a>
+            </div>
+        </header>
+
+        <div class="max-w-4xl mx-auto px-4 py-8">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">Créer une nouvelle commande</h1>
+                <p class="text-gray-600">Configurez votre commande groupée</p>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-8">
+                <!-- Flash Messages -->
+                <div x-show="flashMessage" x-cloak 
+                     :class="flashType === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700'"
+                     class="mb-6 p-4 border rounded-lg">
+                    <p class="text-sm" x-text="flashMessage"></p>
+                </div>
+
+                <form @submit.prevent="createOrder" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            🎵 URL de la première annonce Discogs *
+                        </label>
+                        <input type="url" x-model="form.first_listing_url" required
+                            placeholder="https://www.discogs.com/sell/item/123456789"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <p class="mt-2 text-sm text-gray-600">
+                            Cette annonce déterminera le vendeur pour toute la commande groupée.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            💰 Montant maximum de la commande (€)
+                        </label>
+                        <input type="number" x-model="form.max_amount" min="1" step="0.01"
+                            placeholder="Ex: 200 (optionnel)"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <p class="mt-2 text-sm text-gray-600">
+                            Montant total maximum que vous souhaitez atteindre (optionnel).
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            📅 Date limite *
+                        </label>
+                        <input type="date" x-model="form.deadline" required
+                            :min="new Date().toISOString().split('T')[0]"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <p class="mt-2 text-sm text-gray-600">
+                            Date limite pour rejoindre la commande (obligatoire).
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            💳 Lien PayPal.me (optionnel)
+                        </label>
+                        <input type="url" x-model="form.paypal_link"
+                            placeholder="https://paypal.me/votrenom"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <p class="mt-2 text-sm text-gray-600">
+                            Votre lien PayPal.me pour recevoir les paiements.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-3">
+                            Moment du paiement
+                        </label>
+                        <div class="space-y-3">
+                            <label class="flex items-center">
+                                <input type="radio" x-model="form.payment_timing" value="avant la commande"
+                                       class="text-blue-600 focus:ring-blue-500">
+                                <span class="ml-3">
+                                    <div class="text-sm font-medium">Avant la commande</div>
+                                    <div class="text-xs text-gray-600">Les participants paient avant la commande</div>
+                                </span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" x-model="form.payment_timing" value="à la remise des disques"
+                                       class="text-blue-600 focus:ring-blue-500">
+                                <span class="ml-3">
+                                    <div class="text-sm font-medium">À la remise des disques</div>
+                                    <div class="text-xs text-gray-600">Les participants paient à la réception</div>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            🏠 Votre localisation (optionnel)
+                        </label>
+                        <input type="text" x-model="form.user_location"
+                               placeholder="Ex: Paris, Lyon, Marseille..."
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <p class="mt-2 text-sm text-gray-600">
+                            Votre ville/région pour les autres participants.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            🏪 Lien boutique vendeur (optionnel)
+                        </label>
+                        <input type="url" x-model="form.seller_shop_url"
+                               placeholder="https://www.discogs.com/seller/vendeur/profile"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div class="flex justify-between pt-6">
+                        <a href="/" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                            Annuler
+                        </a>
+                        <button type="submit" :disabled="submitting"
+                                class="px-8 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50">
+                            <span x-show="!submitting">Créer la commande</span>
+                            <span x-show="submitting">Création en cours...</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function createOrderApp() {
+            return {
+                submitting: false,
+                flashMessage: '',
+                flashType: '',
+                form: {
+                    first_listing_url: '',
+                    max_amount: '',
+                    deadline: '',
+                    paypal_link: '', // ADDED
+                    payment_timing: 'avant la commande',
+                    user_location: '',
+                    seller_shop_url: ''
+                },
+                
+                async createOrder() {
+                    if (this.submitting) return;
+                    
+                    this.submitting = true;
+                    this.flashMessage = '';
+                    
+                    try {
+                        const formData = new FormData();
+                        Object.keys(this.form).forEach(key => {
+                            if (this.form[key]) {
+                                formData.append(key, this.form[key]);
+                            }
+                        });
+                        
+                        const response = await fetch('/create_order_form', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        if (response.redirected) {
+                            // If redirected, it means success - follow the redirect
+                            window.location.href = response.url;
+                        } else {
+                            // Handle error case
+                            const text = await response.text();
+                            if (text.includes('alert-danger') || text.includes('alert-warning')) {
+                                // Extract error message from HTML (basic approach)
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(text, 'text/html');
+                                const alertEl = doc.querySelector('.alert');
+                                this.flashMessage = alertEl ? alertEl.textContent.trim() : 'Erreur lors de la création';
+                                this.flashType = 'error';
+                            } else {
+                                this.flashMessage = 'Erreur inattendue';
+                                this.flashType = 'error';
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error creating order:', error);
+                        this.flashMessage = 'Erreur de connexion';
+                        this.flashType = 'error';
+                    } finally {
+                        this.submitting = false;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    volumes:
+      - .:/app
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - DATABASE_URL=postgresql://postgres:devpass@db:5432/mutual_order
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - DISCOGS_CONSUMER_KEY=${DISCOGS_CONSUMER_KEY}
+      - DISCOGS_CONSUMER_SECRET=${DISCOGS_CONSUMER_SECRET}
+      - DISCOGS_ACCESS_TOKEN=${DISCOGS_ACCESS_TOKEN}
+      - DISCOGS_ACCESS_SECRET=${DISCOGS_ACCESS_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"     # HTTP (auto-redirects to HTTPS)
+      - "443:443"   # HTTPS with automatic Let's Encrypt certificate
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    depends_on:
+      - app
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: mutual_order
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: devpass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mutual_order"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  adminer:
+    image: adminer
+    depends_on:
+      - db
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  caddy_data:
+  caddy_config:
