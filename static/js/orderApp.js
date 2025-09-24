@@ -179,9 +179,17 @@ function orderApp() {
                     body: JSON.stringify(this.adminForm)
                 });
                 const result = await response.json();
-                if (response.ok) { this.flashMessage = result.message || 'Paramètres mis à jour avec succès'; await this.loadOrder(); setTimeout(() => this.flashMessage = '', 3000); }
-                else alert(result.error || 'Erreur lors de la mise à jour');
-            } catch (error) { console.error('Error updating settings:', error); alert('Erreur lors de la mise à jour'); }
+                if (response.ok) { 
+                    this.flashMessage = result.message || 'Paramètres mis à jour avec succès'; 
+                    await this.loadOrder(); 
+                    setTimeout(() => this.flashMessage = '', 3000); 
+                } else {
+                    alert(result.error || 'Erreur lors de la mise à jour');
+                }
+            } catch (error) { 
+                console.error('Error updating settings:', error); 
+                alert('Erreur lors de la mise à jour'); 
+            }
         },
 
         async deleteOrder() {
