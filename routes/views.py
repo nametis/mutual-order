@@ -27,9 +27,10 @@ def index():
 def view_order(order_id):
     """View specific order details"""
     order = Order.query.get_or_404(order_id)
+    order_dict = order.to_dict()
     current_user = auth_service.get_current_user()
     
-    return render_template('order_v2.html', order=order, current_user=current_user)
+    return render_template('order_v2.html', order=order_dict, current_user=current_user)
 
 @views_bp.route('/create_order_form', methods=['GET', 'POST'])
 @login_required
