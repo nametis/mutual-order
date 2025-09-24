@@ -11,9 +11,9 @@
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen">
+<div x-data="orderApp()" x-init="init()" class="min-h-screen">
     <div class="max-w-7xl mx-auto px-4 py-6">
-
+        
         <div x-show="loading" x-cloak class="flex justify-center items-center h-64">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
@@ -22,16 +22,8 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                 <!-- Main Content - 2/3 width -->
                 <div class="lg:col-span-2">
-                    
-                    <!-- Flash Messages -->
-                    <div x-show="flashMessage" x-cloak 
-                         class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6">
-                        <span x-text="flashMessage"></span>
-                    </div>
-
                     <!-- Info Section -->
-                    {% include 'components/order_v2/info_section.html' %}   
-                    
+                    {% include 'components/order_v2/info_section.html' %}
                 </div>
             </div>
         </div>
