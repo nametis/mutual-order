@@ -14,103 +14,103 @@
         </button>
     </div>
     
-    <!-- Horizontal Scrolling Container -->
-    <div class="overflow-x-auto">
-        <div class="min-w-full bg-white rounded-lg shadow overflow-hidden">
-            <table class="min-w-full" style="min-width: 800px;">
+    <!-- Mobile: Card Layout -->
+    <div class="block sm:hidden space-y-3">
+        <template x-for="listing in myListings" :key="listing.id + '_mobile'">
+            <div class="border border-gray-200 rounded-lg p-4">
+                <div class="flex items-start space-x-3">
+                    <!-- Image -->
+                    <img x-show="listing.image_url" :src="listing.image_url" 
+                         class="w-16 h-16 object-cover rounded flex-shrink-0">
+                    <div x-show="!listing.image_url" 
+                         class="w-16 h-16 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
+                        <span class="text-gray-400">?</span>
+                    </div>
+                    
+                    <!-- Content -->
+                    <div class="flex-1 min-w-0">
+                        <div class="font-medium text-gray-900 mb-1" x-text="listing.title"></div>
+                        <div class="text-sm text-gray-500 mb-2" x-text="'ID: ' + listing.discogs_id"></div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-lg font-bold text-gray-900" x-text="listing.price_value.toFixed(2) + '€'"></span>
+                            <div class="flex items-center space-x-1">
+                                <a :href="listing.listing_url" target="_blank"
+                                   class="p-2 text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+                                   title="Voir sur Discogs">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+                                        <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+                                    </svg>
+                                </a>
+                                <button x-show="order.status === 'building'" @click="removeListing(listing.id)"
+                                        class="p-2 text-red-600 rounded-full hover:bg-red-100 transition-colors"
+                                        title="Retirer le disque">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 11-2 0v6a1 1 0 112 0V8z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Condition badges for mobile -->
+                        <div class="flex space-x-2">
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full"
+                                  :class="getConditionClass(listing.media_condition)"
+                                  x-text="'V: ' + getShortCondition(listing.media_condition)"></span>
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full"
+                                  :class="getConditionClass(listing.sleeve_condition)"
+                                  x-text="'P: ' + getShortCondition(listing.sleeve_condition)"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+    
+    <!-- Desktop: Simplified Table -->
+    <div class="hidden sm:block">
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <table class="min-w-full">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Pochette</th>
-                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Titre</th>
-                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Prix</th>
-                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">État Vinyle</th>
-                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">État Pochette</th>
-                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Actions</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pochette</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Titre</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prix</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">États</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
-                    <template x-for="listing in myListings" :key="listing.id">
+                    <template x-for="listing in myListings" :key="listing.id + '_desktop'">
                         <tr>
-                            <td class="px-4 sm:px-6 py-4">
+                            <td class="px-6 py-4">
                                 <img x-show="listing.image_url" :src="listing.image_url" 
-                                     class="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded flex-shrink-0">
+                                     class="w-16 h-16 object-cover rounded">
                                 <div x-show="!listing.image_url" 
-                                     class="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
+                                     class="w-16 h-16 bg-gray-100 rounded flex items-center justify-center">
                                     <span class="text-gray-400">?</span>
                                 </div>
                             </td>
-                            <td class="px-4 sm:px-6 py-4 whitespace-nowrap">
-                                <div class="font-medium text-gray-900 max-w-xs truncate" x-text="listing.title"></div>
+                            <td class="px-6 py-4">
+                                <div class="font-medium text-gray-900" x-text="listing.title"></div>
                                 <div class="text-sm text-gray-500" x-text="'ID: ' + listing.discogs_id"></div>
                             </td>
-                            <td class="px-4 sm:px-6 py-4 text-sm text-gray-900 whitespace-nowrap font-medium" x-text="listing.price_value.toFixed(2) + '€'"></td>
-                            <td class="px-4 sm:px-6 py-4">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap"
-                                      :class="getConditionClass(listing.media_condition)"
-                                      x-text="getShortCondition(listing.media_condition)"></span>
+                            <td class="px-6 py-4 text-sm text-gray-900 font-medium" x-text="listing.price_value.toFixed(2) + '€'"></td>
+                            <td class="px-6 py-4">
+                                <div class="flex flex-col space-y-1">
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full"
+                                          :class="getConditionClass(listing.media_condition)"
+                                          x-text="'V: ' + getShortCondition(listing.media_condition)"></span>
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full"
+                                          :class="getConditionClass(listing.sleeve_condition)"
+                                          x-text="'P: ' + getShortCondition(listing.sleeve_condition)"></span>
+                                </div>
                             </td>
-                            <td class="px-4 sm:px-6 py-4">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap"
-                                      :class="getConditionClass(listing.sleeve_condition)"
-                                      x-text="getShortCondition(listing.sleeve_condition)"></span>
-                            </td>
-                            <td class="px-4 sm:px-6 py-4 text-sm text-gray-900 whitespace-nowrap" x-text="listing.username"></td>
-                            <td class="px-4 sm:px-6 py-4">
-                                <div class="flex items-center space-x-2 whitespace-nowrap">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center space-x-2">
                                     <a :href="listing.listing_url" target="_blank"
                                        class="p-2 text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
                                        title="Voir sur Discogs">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
-                                            <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
-                                            <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
-                                        </svg>
-                                    </a>
-                                    <button x-show="order.status === 'building' && (listing.user_id === currentUserId || order.creator_id === currentUserId || isAdmin)" 
-                                            @click="removeListing(listing.id)"
-                                            class="p-2 text-red-600 rounded-full hover:bg-red-100 transition-colors"
-                                            title="Retirer le disque">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 11-2 0v6a1 1 0 112 0V8z" clip-rule="evenodd" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    </template>
-                </tbody>
-            </table>
-        </div>
-    </div>
-    
-    <!-- Mobile scroll hint -->
-    <div class="sm:hidden text-center text-xs text-gray-500 mt-2">
-        ← Glissez pour voir plus de colonnes →
-    </div>
-</div> rounded flex items-center justify-center flex-shrink-0">
-                                    <span class="text-gray-400">?</span>
-                                </div>
-                            </td>
-                            <td class="px-4 sm:px-6 py-4 whitespace-nowrap">
-                                <div class="font-medium text-gray-900 max-w-xs truncate" x-text="listing.title"></div>
-                                <div class="text-sm text-gray-500" x-text="'ID: ' + listing.discogs_id"></div>
-                            </td>
-                            <td class="px-4 sm:px-6 py-4 text-sm text-gray-900 whitespace-nowrap font-medium" x-text="listing.price_value.toFixed(2) + '€'"></td>
-                            <td class="px-4 sm:px-6 py-4">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap"
-                                      :class="getConditionClass(listing.media_condition)"
-                                      x-text="getShortCondition(listing.media_condition)"></span>
-                            </td>
-                            <td class="px-4 sm:px-6 py-4">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap"
-                                      :class="getConditionClass(listing.sleeve_condition)"
-                                      x-text="getShortCondition(listing.sleeve_condition)"></span>
-                            </td>
-                            <td class="px-4 sm:px-6 py-4">
-                                <div class="flex items-center space-x-2 whitespace-nowrap">
-                                    <a :href="listing.listing_url" target="_blank"
-                                       class="p-2 text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
-                                       title="Voir sur Discogs">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
                                             <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
                                         </svg>
@@ -118,7 +118,7 @@
                                     <button x-show="order.status === 'building'" @click="removeListing(listing.id)"
                                             class="p-2 text-red-600 rounded-full hover:bg-red-100 transition-colors"
                                             title="Retirer le disque">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 11-2 0v6a1 1 0 112 0V8z" clip-rule="evenodd" />
                                         </svg>
                                     </button>
@@ -129,11 +129,6 @@
                 </tbody>
             </table>
         </div>
-    </div>
-    
-    <!-- Mobile scroll hint -->
-    <div class="sm:hidden text-center text-xs text-gray-500 mt-2">
-        ← Glissez pour voir plus de colonnes →
     </div>
 </div>
 
@@ -148,26 +143,125 @@
         </h3>
     </div>
     
-    <!-- Horizontal Scrolling Container -->
-    <div class="overflow-x-auto">
-        <div class="min-w-full bg-white rounded-lg shadow overflow-hidden">
-            <table class="min-w-full" style="min-width: 900px;">
+    <!-- Mobile: Card Layout -->
+    <div class="block sm:hidden space-y-3">
+        <template x-for="listing in otherListings" :key="listing.id + '_mobile'">
+            <div class="border border-gray-200 rounded-lg p-4">
+                <div class="flex items-start space-x-3">
+                    <!-- Image -->
+                    <img x-show="listing.image_url" :src="listing.image_url" 
+                         class="w-16 h-16 object-cover rounded flex-shrink-0">
+                    <div x-show="!listing.image_url" 
+                         class="w-16 h-16 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
+                        <span class="text-gray-400">?</span>
+                    </div>
+                    
+                    <!-- Content -->
+                    <div class="flex-1 min-w-0">
+                        <div class="font-medium text-gray-900 mb-1" x-text="listing.title"></div>
+                        <div class="text-sm text-gray-500 mb-1" x-text="'ID: ' + listing.discogs_id"></div>
+                        <div class="text-sm text-gray-600 mb-2" x-text="'Par: ' + listing.username"></div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-lg font-bold text-gray-900" x-text="listing.price_value.toFixed(2) + '€'"></span>
+                            <div class="flex items-center space-x-1">
+                                <a :href="listing.listing_url" target="_blank"
+                                   class="p-2 text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+                                   title="Voir sur Discogs">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+                                        <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+                                    </svg>
+                                </a>
+                                <button x-show="order.status === 'building' && (listing.user_id === currentUserId || order.creator_id === currentUserId || isAdmin)" 
+                                        @click="removeListing(listing.id)"
+                                        class="p-2 text-red-600 rounded-full hover:bg-red-100 transition-colors"
+                                        title="Retirer le disque">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 11-2 0v6a1 1 0 112 0V8z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Condition badges for mobile -->
+                        <div class="flex space-x-2">
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full"
+                                  :class="getConditionClass(listing.media_condition)"
+                                  x-text="'V: ' + getShortCondition(listing.media_condition)"></span>
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full"
+                                  :class="getConditionClass(listing.sleeve_condition)"
+                                  x-text="'P: ' + getShortCondition(listing.sleeve_condition)"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+    
+    <!-- Desktop: Simplified Table -->
+    <div class="hidden sm:block">
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <table class="min-w-full">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Pochette</th>
-                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Titre</th>
-                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Prix</th>
-                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">État Vinyle</th>
-                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">État Pochette</th>
-                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Ajouté par</th>
-                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Actions</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pochette</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Titre</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prix</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">États</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ajouté par</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
-                    <template x-for="listing in otherListings" :key="listing.id">
+                    <template x-for="listing in otherListings" :key="listing.id + '_desktop'">
                         <tr>
-                            <td class="px-4 sm:px-6 py-4">
+                            <td class="px-6 py-4">
                                 <img x-show="listing.image_url" :src="listing.image_url" 
-                                     class="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded flex-shrink-0">
+                                     class="w-16 h-16 object-cover rounded">
                                 <div x-show="!listing.image_url" 
-                                     class="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100
+                                     class="w-16 h-16 bg-gray-100 rounded flex items-center justify-center">
+                                    <span class="text-gray-400">?</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="font-medium text-gray-900" x-text="listing.title"></div>
+                                <div class="text-sm text-gray-500" x-text="'ID: ' + listing.discogs_id"></div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-900 font-medium" x-text="listing.price_value.toFixed(2) + '€'"></td>
+                            <td class="px-6 py-4">
+                                <div class="flex flex-col space-y-1">
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full"
+                                          :class="getConditionClass(listing.media_condition)"
+                                          x-text="'V: ' + getShortCondition(listing.media_condition)"></span>
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full"
+                                          :class="getConditionClass(listing.sleeve_condition)"
+                                          x-text="'P: ' + getShortCondition(listing.sleeve_condition)"></span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-900" x-text="listing.username"></td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center space-x-2">
+                                    <a :href="listing.listing_url" target="_blank"
+                                       class="p-2 text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+                                       title="Voir sur Discogs">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+                                            <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+                                        </svg>
+                                    </a>
+                                    <button x-show="order.status === 'building' && (listing.user_id === currentUserId || order.creator_id === currentUserId || isAdmin)" 
+                                            @click="removeListing(listing.id)"
+                                            class="p-2 text-red-600 rounded-full hover:bg-red-100 transition-colors"
+                                            title="Retirer le disque">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 11-2 0v6a1 1 0 112 0V8z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
