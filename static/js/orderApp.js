@@ -332,6 +332,13 @@ function orderApp() {
 
         get isParticipant() {
             return this.myListings.length > 0;
+        },
+
+        get showChatBlock() {
+            // Show chat on step 2 (validation) or after step 3 (ordered/delivered/closed)
+            const stepIndex = this.statusSteps.findIndex(s => s.key === this.order.status);
+            return stepIndex === 1 || stepIndex >= 3;
         }
+
     };
 }
