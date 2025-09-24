@@ -1,0 +1,72 @@
+<!-- templates/components/order_v2/status_section.html -->
+<div class="bg-white rounded-lg shadow p-6">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold">État de la commande</h3>
+        <button @click="shareOrder()" 
+                class="px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 text-sm transition-colors">
+            🔗 Partager
+        </button>
+    </div>
+    
+    <!-- Status Progress Steps -->
+    <div class="mb-6">
+        <div class="flex justify-between items-center relative py-2">
+            <div class="absolute inset-x-0 top-1/2 h-0.5 bg-gray-300 transform -translate-y-1/2"></div>
+            
+            <template x-for="(step, index) in statusSteps" :key="step.key">
+                <div class="flex flex-col items-center relative z-10 gap-y-2">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-2"
+                        :class="getStepClass(step.key, index)">
+                        <span x-show="isStepCompleted(step.key)" class="text-white">✓</span>
+                        <span x-show="!isStepCompleted(step.key)" x-text="index + 1"></span>
+                    </div>
+                    <div class="text-xs text-center leading-tight max-w-16"
+                        :class="{ 'font-bold text-blue-500': step.key === order.status }" 
+                        x-text="step.emoji">
+                    </div>
+                    <div class="text-xs text-center leading-tight max-w-16"
+                        :class="{ 'font-bold text-blue-500': step.key === order.status }"
+                        x-text="step.label">
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+    
+    <!-- Workflow Actions (Creator Only) -->
+    <div x-show="order.creator_id === currentUserId || isAdmin" class="space-y-1">
+        <div class="flex space-x-2 items-stretch">
+            <!-- Previous Step Button - 25% width -->
+            <button x-show="order.status !== 'building'" @click="updateOrderStatus(getPreviousStatus())"
+                    class="w-1/4 bg-gray-500 text-white py-3 px-2 rounded hover:bg-gray-600 text-sm min-h-[44px] flex items-center justify-center">
+                <span class="leading-tight text-center">← Retour</span>
+            </button>
+            
+            <!-- Next Step Buttons - 75% width -->
+            <div x-show="order.status === 'building'" class="w-3/4">
+                <button @click="updateOrderStatus('validation')"
+                        class="w-full bg-green-600 text-white py-3 px-4 rounded hover:bg-green-700 text-sm min-h-[44px] flex items-center justify-center">
+                    <span class="leading-tight text-center">Étape suivante: ⏳ Validation</span>
+                </button>
+            </div>
+            <div x-show="order.status === 'validation'" class="w-3/4">
+                <button @click="updateOrderStatus('ordered')"
+                        class="w-full bg-blue-600 text-white py-3 px-4 rounded hover:bg-blue-700 text-sm min-h-[44px] flex items-center justify-center">
+                    <span class="leading-tight text-center">Étape suivante: ✅ Commandé</span>
+                </button>
+            </div>
+            <div x-show="order.status === 'ordered'" class="w-3/4">
+                <button @click="updateOrderStatus('delivered')"
+                        class="w-full bg-green-600 text-white py-3 px-4 rounded hover:bg-blue-700 text-sm min-h-[44px] flex items-center justify-center">
+                    <span class="leading-tight text-center">Étape suivante: 💿 Livré</span>
+                </button>
+            </div>
+            <div x-show="order.status === 'delivered'" class="w-3/4">
+                <button @click="updateOrderStatus('closed')"
+                        class="w-full bg-gray-600 text-white py-3 px-4 rounded hover:bg-gray-700 text-sm min-h-[44px] flex items-center justify-center">
+                    <span class="leading-tight text-center">Étape suivante: 🎁 Distribué</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

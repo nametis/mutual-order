@@ -258,3 +258,13 @@ def clear_cache():
         flash('Pas de cache Redis disponible', 'info')
     
     return redirect(url_for('views.index'))
+
+
+@views_bp.route('/order/<int:order_id>/v2')
+@login_required
+def view_order_v2(order_id):
+    """View specific order details - New modular version"""
+    order = Order.query.get_or_404(order_id)
+    current_user = auth_service.get_current_user()
+    
+    return render_template('order_v2.html', order=order, current_user=current_user)

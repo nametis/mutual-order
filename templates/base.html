@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MUTUAL ORDER 0.4{% endblock %}</title>
+    
+    <!-- CSS Dependencies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+    <link href="{{ url_for('static', filename='css/custom-responsive.css') }}" rel="stylesheet">
+    
+    <!-- Alpine.js Configuration -->
+    <style>[x-cloak] { display: none !important; }</style>
+    
+    {% block head %}{% endblock %}
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    {% include 'components/header.html' %}
+    
+    <!-- Flash Messages -->
+    {% include 'components/flash_messages.html' %}
+    
+    <!-- Main Content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    {% include 'components/footer.html' %}
+    
+    <!-- JavaScript -->
+    {% block scripts %}{% endblock %}
+    
+    <!-- Global Scripts -->
+    <script src="{{ url_for('static', filename='js/global.js') }}"></script>
+</body>
+</html>
