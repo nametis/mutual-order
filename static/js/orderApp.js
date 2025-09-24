@@ -205,11 +205,12 @@ function orderApp() {
                 const response = await fetch(`/api/orders/${this.getOrderId()}/chat/messages`);
                 if (response.ok) {
                     this.chatMessages = await response.json();
+                    this.scrollChatToBottom();
                     setTimeout(() => { if (this.$refs.chatMessages) this.$refs.chatMessages.scrollTop = this.$refs.chatMessages.scrollHeight; }, 100);
                 }
             } catch (error) { console.error('Error loading chat messages:', error); }
         },
-
+        
         async sendMessage() {
             if (!this.newMessage.trim()) return;
             try {
@@ -235,6 +236,30 @@ function orderApp() {
                 await fetch(`/api/orders/${this.getOrderId()}/chat/mark_read`, { method: 'POST' });
                 this.unreadCount = 0;
             } catch (error) { console.error('Error marking messages as read:', error); }
+        },
+
+        async validateUserParticipation() {
+            if (!this.validationAgreement) return;
+
+            try {
+                const response = await fetch(`/api/orders/${this.getOrderId()}/validate`, {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    this.userValidated = true;
+                    this.flashMessage = 'Participation validée avec succès';
+                    await this.loadValidations();
+                    await this.loadOrder();
+                    setTimeout(() => this.flashMessage = '', 3000);
+                } else {
+                    alert(result.error || 'Erreur lors de la validation');
+                }
+            } catch (error) {
+                console.error('Error validating participation:', error);
+                alert('Erreur lors de la validation');
+            }
         },
 
         shareOrder() {
@@ -317,6 +342,26 @@ function orderApp() {
         getOrderId() {
             return window.location.pathname.split('/')[2];
         },
+        
+        scrollChatToBottom() {
+            setTimeout(() => {
+                // Scroll floating chat modal
+                const floatingChat = this.$refs.chatMessages;
+                if (floatingChat) {
+                    floatingChat.scrollTop = floatingChat.scrollHeight;
+                }
+                
+                // Scroll embedded chat
+                const embeddedChat = this.$refs.embeddedChatMessages;
+                if (embeddedChat) {
+                    embeddedChat.scrollTop = embeddedChat.scrollHeight;
+                }
+            }, 100);
+        },    
+        
+        isParticipantValidated(participantId) {
+            return this.validations.some(v => v.user_id === participantId && v.validated);
+        },
 
         get myTotal() {
             return this.order.current_user_summary ? this.order.current_user_summary.subtotal : 0;
@@ -344,33 +389,5 @@ function orderApp() {
             return stepIndex === 1 || stepIndex >= 3;
         },
 
-        // Add this to your existing static/js/orderApp.js file:
-        isParticipantValidated(participantId) {
-            return this.validations.some(v => v.user_id === participantId && v.validated);
-        },
-
-        async validateUserParticipation() {
-            if (!this.validationAgreement) return;
-
-            try {
-                const response = await fetch(`/api/orders/${this.getOrderId()}/validate`, {
-                    method: 'POST'
-                });
-
-                const result = await response.json();
-                if (response.ok) {
-                    this.userValidated = true;
-                    this.flashMessage = 'Participation validée avec succès';
-                    await this.loadValidations();
-                    await this.loadOrder();
-                    setTimeout(() => this.flashMessage = '', 3000);
-                } else {
-                    alert(result.error || 'Erreur lors de la validation');
-                }
-            } catch (error) {
-                console.error('Error validating participation:', error);
-                alert('Erreur lors de la validation');
-            }
-        },
     };
 }
