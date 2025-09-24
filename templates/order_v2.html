@@ -14,6 +14,10 @@
 <div class="min-h-screen">
     <div class="max-w-7xl mx-auto px-4 py-6">
 
+        <div x-show="loading" x-cloak class="flex justify-center items-center h-64">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+        
         <!-- Info Section -->
         {% include 'components/order_v2/info_section.html' %}
         
