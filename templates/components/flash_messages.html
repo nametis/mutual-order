@@ -1,0 +1,139 @@
+<!-- templates/components/flash_messages.html -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="max-w-7xl mx-auto px-4 pt-4">
+            {% for category, message in messages %}
+                <div class="mb-4 p-4 rounded-lg border flex items-start space-x-3
+                    {% if category == 'danger' %}
+                        bg-red-50 border-red-200 text-red-700
+                    {% elif category == 'warning' %}
+                        bg-yellow-50 border-yellow-200 text-yellow-700
+                    {% elif category == 'info' %}
+                        bg-blue-50 border-blue-200 text-blue-700
+                    {% elif category == 'success' %}
+                        bg-green-50 border-green-200 text-green-700
+                    {% else %}
+                        bg-gray-50 border-gray-200 text-gray-700
+                    {% endif %}"
+                    x-data="{ show: true }" 
+                    x-show="show" 
+                    x-transition>
+                    
+                    <!-- Icon -->
+                    <div class="flex-shrink-0">
+                        {% if category == 'danger' %}
+                            <span class="text-lg">❌</span>
+                        {% elif category == 'warning' %}
+                            <span class="text-lg">⚠️</span>
+                        {% elif category == 'info' %}
+                            <span class="text-lg">ℹ️</span>
+                        {% elif category == 'success' %}
+                            <span class="text-lg">✅</span>
+                        {% else %}
+                            <span class="text-lg">💬</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Message -->
+                    <div class="flex-1">
+                        <p class="text-sm font-medium">{{ message }}</p>
+                    </div>
+                    
+                    <!-- Close button -->
+                    <button @click="show = false" 
+                            class="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+<!-- Alpine.js Flash Messages (for AJAX) -->
+<div x-data="flashMessages()" class="max-w-7xl mx-auto px-4">
+    <template x-for="message in messages" :key="message.id">
+        <div class="mb-4 p-4 rounded-lg border flex items-start space-x-3"
+             :class="getMessageClass(message.type)"
+             x-show="message.show" 
+             x-transition>
+            <div class="flex-shrink-0" x-html="getMessageIcon(message.type)"></div>
+            <div class="flex-1">
+                <p class="text-sm font-medium" x-text="message.text"></p>
+            </div>
+            <button @click="removeMessage(message.id)" 
+                    class="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+    </template>
+</div>
+
+<script>
+function flashMessages() {
+    return {
+        messages: [],
+        
+        addMessage(type, text, duration = 5000) {
+            const id = Date.now() + Math.random();
+            const message = { id, type, text, show: true };
+            this.messages.push(message);
+            
+            if (duration > 0) {
+                setTimeout(() => this.removeMessage(id), duration);
+            }
+            
+            return id;
+        },
+        
+        removeMessage(id) {
+            const index = this.messages.findIndex(m => m.id === id);
+            if (index !== -1) {
+                this.messages[index].show = false;
+                setTimeout(() => {
+                    this.messages.splice(index, 1);
+                }, 300);
+            }
+        },
+        
+        getMessageClass(type) {
+            const classes = {
+                'danger': 'bg-red-50 border-red-200 text-red-700',
+                'warning': 'bg-yellow-50 border-yellow-200 text-yellow-700',
+                'info': 'bg-blue-50 border-blue-200 text-blue-700',
+                'success': 'bg-green-50 border-green-200 text-green-700'
+            };
+            return classes[type] || 'bg-gray-50 border-gray-200 text-gray-700';
+        },
+        
+        getMessageIcon(type) {
+            const icons = {
+                'danger': '<span class="text-lg">❌</span>',
+                'warning': '<span class="text-lg">⚠️</span>',
+                'info': '<span class="text-lg">ℹ️</span>',
+                'success': '<span class="text-lg">✅</span>'
+            };
+            return icons[type] || '<span class="text-lg">💬</span>';
+        }
+    }
+}
+
+// Global function to add flash messages from anywhere
+window.addFlashMessage = function(type, text, duration = 5000) {
+    // Try to find flash messages component
+    const flashComponent = document.querySelector('[x-data*="flashMessages"]');
+    if (flashComponent && flashComponent._x_dataStack) {
+        const data = flashComponent._x_dataStack[0];
+        if (data.addMessage) {
+            return data.addMessage(type, text, duration);
+        }
+    }
+    
+    // Fallback: console log
+    console.log(`Flash ${type}: ${text}`);
+}
+</script>

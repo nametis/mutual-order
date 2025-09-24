@@ -1,0 +1,58 @@
+<!-- templates/components/footer.html -->
+<footer class="bg-white border-t border-gray-200 mt-12">
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+            <!-- About Section -->
+            <div>
+                <h3 class="text-sm font-semibold text-gray-900 mb-4">MUTUAL ORDER</h3>
+                <p class="text-sm text-gray-600 mb-3">
+                    Plateforme collaborative pour organiser des commandes groupées de vinyles sur Discogs.
+                </p>
+                <div class="text-xs text-gray-500">
+                    Version 0.4 - Architecture modulaire
+                </div>
+            </div>
+            
+            <!-- Quick Links -->
+            <div>
+                <h3 class="text-sm font-semibold text-gray-900 mb-4">Liens rapides</h3>
+                <ul class="space-y-2 text-sm">
+                    {% if current_user and current_user.is_authenticated %}
+                        <li><a href="/" class="text-gray-600 hover:text-blue-600 transition-colors">Dashboard</a></li>
+                        <li><a href="/create_order_form" class="text-gray-600 hover:text-blue-600 transition-colors">Nouvelle commande</a></li>
+                        <li><a href="/settings" class="text-gray-600 hover:text-blue-600 transition-colors">Paramètres</a></li>
+                    {% else %}
+                        <li><a href="/auth/login" class="text-gray-600 hover:text-blue-600 transition-colors">Se connecter</a></li>
+                    {% endif %}
+                    <li><a href="/help" class="text-gray-600 hover:text-blue-600 transition-colors">Aide</a></li>
+                    <li><a href="/about" class="text-gray-600 hover:text-blue-600 transition-colors">À propos</a></li>
+                </ul>
+            </div>
+            
+            <!-- External Links -->
+            <div>
+                <h3 class="text-sm font-semibold text-gray-900 mb-4">Ressources</h3>
+                <ul class="space-y-2 text-sm">
+                    <li><a href="https://www.discogs.com" target="_blank" class="text-gray-600 hover:text-blue-600 transition-colors">Discogs</a></li>
+                    <li><a href="https://github.com" target="_blank" class="text-gray-600 hover:text-blue-600 transition-colors">Code source</a></li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Bottom Bar -->
+        <div class="border-t border-gray-200 mt-8 pt-6">
+            <div class="flex flex-col sm:flex-row justify-between items-center">
+                <div class="text-xs text-gray-500">
+                    © 2025 Mutual Order. Développé avec ❤️ pour la communauté vinyle.
+                </div>
+                <div class="flex items-center space-x-4 mt-4 sm:mt-0">
+                    <span class="text-xs text-gray-400">Powered by Flask + Alpine.js</span>
+                    {% if current_user and current_user.is_admin %}
+                        <a href="/clear_cache" class="text-xs text-gray-400 hover:text-gray-600">Clear Cache</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
