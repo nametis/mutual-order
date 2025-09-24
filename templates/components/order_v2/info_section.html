@@ -31,8 +31,8 @@
         </a>
     </div>
 
-    <!-- Stats Grid - Mobile: 2 cols, Tablet: 3 cols, Desktop: 7 cols (original) -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-2">
+    <!-- Stats Grid - Mobile: 2 cols, Tablet: 4 cols, Desktop: 8 cols with last item spanning 3 cols -->
+    <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-2">
         
         <!-- Number of discs -->
         <div class="p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
@@ -63,18 +63,47 @@
             <div class="flex items-center space-x-1 mb-1">
                 <span class="text-sm">🕒</span>
                 <span class="text-sm font-bold text-gray-900" 
-                      x-text="order.deadline ? calculateTimeRemaining(order.deadline) : 'N/A'"></span>
+                      x-text="order.deadline ? Math.max(0, Math.ceil((new Date(order.deadline) - new Date()) / (1000 * 60 * 60 * 24))) + 'j' : 'N/A'"></span>
             </div>
-            <span class="text-xs font-medium text-gray-700">Restant</span>
+            <span class="text-xs font-medium text-gray-700">Restants</span>
         </div>
 
         <!-- Creator -->
         <div class="p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
             <div class="flex items-center space-x-1 mb-1">
                 <span class="text-sm">👑</span>
-                <span class="text-sm font-bold text-gray-900" x-text="order.creator_username || 'N/A'"></span>
+                <span class="text-sm font-bold text-gray-900" x-text="order.creator?.username || 'N/A'"></span>
             </div>
             <span class="text-xs font-medium text-gray-700">Créateur</span>
+        </div>
+
+        <!-- Location - EDITABLE -->
+        <div class="relative p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
+            <!-- Edit pen icon -->
+            <button x-show="order.creator_id === currentUserId || isAdmin" 
+                    @click="editField = 'location'"
+                    class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                ✏️
+            </button>
+            <div class="flex items-center space-x-1 mb-1">
+                <span class="text-sm">🏠</span>
+                <span class="text-xs font-bold text-gray-900" x-text="order.user_location || 'N/A'"></span>
+            </div>
+            <span class="text-xs font-medium text-gray-700">Localisation</span>
+        </div>
+
+        <!-- Payment rule - EDITABLE -->
+        <div class="relative p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
+            <!-- Edit pen icon -->
+            <button x-show="order.creator_id === currentUserId || isAdmin" 
+                    @click="editField = 'payment'"
+                    class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                ✏️
+            </button>
+            <div class="flex items-center space-x-1 mb-1">
+                <span class="text-xs font-medium text-gray-900">💳 Paiement</span>
+            </div>
+            <span class="text-sm font-bold text-gray-700" x-text="order.payment_timing"></span>
         </div>
 
         <!-- PayPal Me link - EDITABLE -->
@@ -113,8 +142,8 @@
             <span class="text-xs font-medium text-gray-700">Discount</span>
         </div>
         
-        <!-- Shipping & Taxes - spans multiple columns - EDITABLE -->
-        <div class="relative col-span-2 sm:col-span-3 xl:col-span-3 p-2 sm:p-3 bg-gray-100 rounded flex flex-col sm:flex-row items-center justify-between min-h-[60px] sm:min-h-[70px]">
+        <!-- Shipping & Taxes - spans 3 columns on desktop, full width on mobile/tablet -->
+        <div class="relative col-span-2 md:col-span-4 xl:col-span-3 p-2 sm:p-3 bg-gray-100 rounded flex flex-col sm:flex-row items-center justify-between min-h-[60px] sm:min-h-[70px]">
             <!-- Edit pen icon -->
             <button x-show="order.creator_id === currentUserId || isAdmin" 
                     @click="editField = 'fees'"
