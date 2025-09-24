@@ -1,25 +1,18 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MUTUAL ORDER - Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>[x-cloak] { display: none !important; }</style>
-</head>
+{% extends "base.html" %}
+
+{% block title %}Dashboard V2 {% endblock %}
+
+{% block head %}
+    <script>
+        // Pass user data to JavaScript
+        window.currentUserId = {{ current_user.id }};
+        window.isAdmin = {{ 'true' if current_user.is_admin else 'false' }};
+    </script>
+{% endblock %}
+
+{% block content %}
 <body class="bg-gray-50">
     <div x-data="dashboardApp()" x-init="init()" class="min-h-screen">
-        <header class="bg-white shadow-sm border-b">
-            <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-                <div class="flex items-center space-x-4">
-                    <h1 class="text-xl font-bold text-gray-900">MUTUAL ORDER 0.4</h1>
-                    <span class="text-gray-500">|</span>
-                    <span class="text-gray-700">{{ user.username }}</span>
-                </div>
-                <a href="/logout" class="text-blue-600 hover:text-blue-800">Déconnexion</a>
-            </div>
-        </header>
 
         <div x-show="loading" x-cloak class="flex justify-center items-center h-64">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -253,4 +246,4 @@
     }
     </script>
 </body>
-</html>
+{% endblock %}

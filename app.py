@@ -207,6 +207,14 @@ def register_cli_commands(app):
             db.session.rollback()
             print(f"Error creating admin user: {e}")
 
+
+    @app.context_processor
+    def inject_user():
+        from services import auth_service
+        if auth_service.is_authenticated():
+            return dict(current_user=auth_service.get_current_user())
+        return dict(current_user=None)
+    
 # Application factory setup
 app = None
 

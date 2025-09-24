@@ -268,3 +268,10 @@ def view_order_v2(order_id):
     current_user = auth_service.get_current_user()
     
     return render_template('order_v2.html', order=order, current_user=current_user)
+
+@views_bp.route('/dashboard_v2')
+@login_required
+def index_v2():
+    """Main dashboard page"""
+    user = auth_service.get_current_user()
+    return render_template('dashboard_v2.html', user=user)

@@ -5,11 +5,8 @@
             <!-- Logo and Navigation -->
             <div class="flex items-center space-x-4">
                 <a href="{{ url_for('views.index') }}" class="text-xl font-bold text-blue-600 hover:text-blue-800 transition-colors">
-                    MUTUAL ORDER 0.5
+                    MUTUAL ORDER 0.4
                 </a>
-                    <span class="text-gray-500">|</span>
-                    <span class="text-gray-700">{{ user.username }}</span>
-
                 
                 {% if current_user and current_user.is_authenticated %}
                     <span class="hidden sm:inline text-gray-500">|</span>
@@ -27,7 +24,7 @@
             </div>
 
             <!-- User Menu -->
-            {% if current_user %}
+            {% if current_user and current_user.is_authenticated %}
                 <div class="flex items-center space-x-2 sm:space-x-4">
                     <!-- Mobile Menu Button -->
                     <div class="sm:hidden" x-data="{ open: false }">
@@ -40,39 +37,52 @@
                         
                         <!-- Mobile Dropdown -->
                         <div x-show="open" x-cloak @click.away="open = false"
-                            class="absolute right-4 top-16 bg-white rounded-lg shadow-lg border py-2 min-w-48 z-50">
+                             class="absolute right-4 top-16 bg-white rounded-lg shadow-lg border py-2 min-w-48 z-50">
                             <a href="{{ url_for('views.index') }}" 
-                            class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                               class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
                                 🏠 Dashboard
                             </a>
                             <a href="{{ url_for('views.create_order_form') }}" 
-                            class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                               class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
                                 ➕ Nouvelle commande
                             </a>
                             <hr class="my-2">
+                            <a href="{{ url_for('views.settings') }}" 
+                               class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                                ⚙️ Paramètres
+                            </a>
                             <a href="{{ url_for('auth.logout') }}" 
-                            class="block px-4 py-2 text-red-600 hover:bg-red-50">
+                               class="block px-4 py-2 text-red-600 hover:bg-red-50">
                                 🚪 Déconnexion
                             </a>
                         </div>
                     </div>
                     
                     <!-- Desktop Menu -->
-                    <div class="hidden sm:flex items-center space-x-4">                        
+                    <div class="hidden sm:flex items-center space-x-4">
+                        <span class="text-gray-700 font-medium">{{ current_user.username }}</span>
+                        
+                        <a href="{{ url_for('views.settings') }}" 
+                           class="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition-colors">
+                            <span>⚙️</span>
+                            <span class="hidden lg:inline">Paramètres</span>
+                        </a>
+                        
                         <a href="{{ url_for('auth.logout') }}" 
                            class="flex items-center space-x-1 text-gray-600 hover:text-red-600 transition-colors">
-                            <span class="text-blue-600 hover:text-blue-800">Déconnexion</span>
+                            <span>🚪</span>
+                            <span class="hidden lg:inline">Déconnexion</span>
                         </a>
                     </div>
                 </div>
             {% else %}
                 <div class="flex items-center space-x-4">
                     <a href="{{ url_for('auth.login') }}" 
-                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                       class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
                         Se connecter
                     </a>
                 </div>
-            {% endif %}            
+            {% endif %}
         </div>
     </div>
 </header>
