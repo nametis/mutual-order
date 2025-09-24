@@ -1,43 +1,38 @@
 <!-- Combined Seller Info and Stats -->
 <div class="bg-white rounded-lg shadow p-4 sm:p-6">
     
-    <!-- Header Section - Responsive Stack -->
-    <div class="space-y-3 mb-4 sm:mb-6">
-        <!-- Title and Badges Row -->
-        <div class="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4">
-            <h1 class="text-xl sm:text-2xl font-bold text-gray-900 min-w-0 truncate" x-text="'Commande chez ' + order.seller_name"></h1>
-            
-            <!-- Rating Badge -->
-            <div x-show="sellerInfo.rating" class="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded-full self-start">
-                <span class="text-yellow-500">⭐</span>
-                <span class="text-sm font-medium" x-text="sellerInfo.rating ? sellerInfo.rating.toFixed(0) + '%' : ''"></span>
-            </div>
-            
-            <!-- Location Badge -->
-            <div x-show="sellerInfo.location && sellerInfo.location !== 'Non spécifiée'" class="flex items-center space-x-1 text-gray-600 bg-gray-100 px-2 py-1 rounded-full self-start">
-                <span>📍</span>
-                <span class="text-sm" x-text="sellerInfo.location"></span>
-            </div>
+    <!-- Header line with seller info and actions - Desktop: single line, Mobile: wrapping -->
+    <div class="flex flex-wrap items-baseline gap-2 sm:gap-4 mb-3">
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 min-w-0" x-text="'Commande chez ' + order.seller_name"></h1>
+        
+        <!-- Rating Badge -->
+        <div x-show="sellerInfo.rating" class="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded-full">
+            <span class="text-yellow-500">⭐</span>
+            <span class="text-sm font-medium" x-text="sellerInfo.rating ? sellerInfo.rating.toFixed(0) + '%' : ''"></span>
         </div>
         
-        <!-- Action Buttons Row - Wrapping on Mobile -->
-        <div class="flex flex-wrap gap-2">
-            <a :href="'https://www.discogs.com/user/' + order.seller_name" target="_blank" 
-               class="flex items-center space-x-1 px-3 py-1 bg-white border border-black rounded-full text-black hover:bg-gray-50 text-xs transition-colors">
-                <span>👤</span>
-                <span>Profil Discogs</span>
-            </a>
-            
-            <a x-show="order.direct_url" :href="order.direct_url" target="_blank"
-               class="flex items-center space-x-1 px-3 py-1 bg-white border border-black rounded-full text-black hover:bg-gray-50 text-xs transition-colors">
-                <span>🔗</span>
-                <span>Site vendeur</span>
-            </a>
+        <!-- Location Badge -->
+        <div x-show="sellerInfo.location && sellerInfo.location !== 'Non spécifiée'" class="flex items-center space-x-1 text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
+            <span>📍</span>
+            <span class="text-sm" x-text="sellerInfo.location"></span>
         </div>
+        
+        <!-- Action Buttons - Keep on same line on desktop, wrap on mobile -->
+        <a :href="'https://www.discogs.com/user/' + order.seller_name" target="_blank" 
+           class="flex items-center space-x-1 px-3 py-1 bg-white border border-black rounded-full text-black hover:bg-gray-50 text-xs transition-colors">
+            <span>👤</span>
+            <span>Profil Discogs</span>
+        </a>
+        
+        <a x-show="order.direct_url" :href="order.direct_url" target="_blank"
+           class="flex items-center space-x-1 px-3 py-1 bg-white border border-black rounded-full text-black hover:bg-gray-50 text-xs transition-colors">
+            <span>🔗</span>
+            <span>Site vendeur</span>
+        </a>
     </div>
 
-    <!-- Stats Grid - Mobile Responsive: 2 cols mobile, 3 cols tablet, 7 cols desktop -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2">
+    <!-- Stats Grid - Mobile: 2 cols, Tablet: 3 cols, Desktop: 7 cols (original) -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-2">
         
         <!-- Number of discs -->
         <div class="p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
@@ -119,7 +114,7 @@
         </div>
         
         <!-- Shipping & Taxes - spans multiple columns - EDITABLE -->
-        <div class="relative col-span-2 sm:col-span-3 lg:col-span-3 p-2 sm:p-3 bg-gray-100 rounded flex flex-col sm:flex-row items-center justify-between min-h-[60px] sm:min-h-[70px]">
+        <div class="relative col-span-2 sm:col-span-3 xl:col-span-3 p-2 sm:p-3 bg-gray-100 rounded flex flex-col sm:flex-row items-center justify-between min-h-[60px] sm:min-h-[70px]">
             <!-- Edit pen icon -->
             <button x-show="order.creator_id === currentUserId || isAdmin" 
                     @click="editField = 'fees'"
