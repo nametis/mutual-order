@@ -29,11 +29,9 @@
             <div class="lg:col-span-2">
                 <!-- Info Section -->
                 {% include 'components/order_v2/info_section.html' %}
+                {% include 'components/order_v2/add_listing_section.html' %} 
+                {% include 'components/order_v2/validation_section.html' %}
             </div>
-
-            <h1 class="text-2xl font-bold text-gray-900 mb-4">
-                Commande chez {{ order.seller_name }} (Version 2 - Test)
-            </h1>
             
             <div class="grid grid-cols-2 gap-4 mb-6">
                 <div class="bg-gray-100 p-4 rounded">

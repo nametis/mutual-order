@@ -1,0 +1,24 @@
+<!-- Add Listing Section (building phase only)-->
+<div x-show="order.status === 'building'" class="bg-white rounded-lg shadow p-6 mt-6">
+    <div class="flex items-baseline space-x-4 mb-4">
+        <h3 class="flex items-center space-x-2 text-xl font-bold text-gray-900">
+            <span class="bg-yellow-100 px-3 py-1 rounded-full">
+            <span>➕</span>
+            <span>Ajouter un disque</span>
+        </h3>
+        <a :href="'https://www.discogs.com/seller/' + order.seller_name + '/profile'" target="_blank"
+        class="flex items-baseline space-x-1 px-3 py-1 bg-white border border-black rounded-full text-black hover:bg-gray-50 text-xs transition-colors">
+            <span>👤</span>
+            <span>Voir les autres disques du vendeur</span>
+        </a>
+    </div>
+    <div class="flex space-x-4">
+        <input x-model="newListingUrl" type="url" 
+            placeholder="Coller l'URL de l'annonce Discogs..."
+            class="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500">
+        <button @click="addListing()" 
+                class="px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700">
+            Ajouter à la commande
+        </button>
+    </div>
+</div>

@@ -1,17 +1,97 @@
-<div class="bg-white rounded-lg shadow p-6">
-    <div class="flex items-center justify-between mb-6">
+<!-- Validation Phase -->
+<div x-show="order.status === 'validation'" class="bg-white rounded-lg shadow p-6 mt-6">
+    <div class="flex items-center justify-between mb-4">
         <h3 class="flex items-center space-x-2 text-xl font-bold text-gray-900">
-            <span class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">⏳</span>
-            <span>WIP</span>
+            <span>⏳</span>
+            <span>Validation de la commande</span>
         </h3>
-        <div class="bg-blue-50 px-3 py-1 rounded-full text-blue-700 text-sm font-medium">
-            En cours
+    </div>
+
+    <!-- User validation for participants -->
+    <div x-show="isParticipant && !isCreator" class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <h4 class="font-semibold text-blue-900 mb-3">Récapitulatif de votre commande:</h4>
+        
+        <!-- My discs breakdown -->
+        <div class="mb-4">
+            <table class="w-full text-sm">
+                <thead class="bg-blue-100">
+                    <tr>
+                        <th class="text-left p-2">Disque</th>
+                        <th class="text-right p-2">Prix unitaire</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="listing in myListings" :key="listing.id + '_validation'">
+                        <tr class="border-b border-blue-100">
+                            <td class="p-2" x-text="listing.title"></td>
+                            <td class="p-2 text-right" x-text="listing.price_value.toFixed(2) + '€'"></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Summary -->
+        <div class="grid grid-cols-2 gap-4 text-sm mb-4">
+            <div>
+                <strong>Nombre de disques:</strong> <span x-text="order.current_user_summary.listings_count"></span>
+            </div>
+            <div>
+                <strong>Sous-total disques:</strong> <span x-text="order.current_user_summary.subtotal.toFixed(2) + '€'"></span>
+            </div>
+            <div>
+                <strong>Frais & Taxes (votre part):</strong> <span x-text="order.current_user_summary.fees_share.toFixed(2) + '€'"></span>
+            </div>
+            <div x-show="order.current_user_summary.discount_share > 0" class="col-span-2">
+                <strong>Discount (votre part):</strong> <span class="text-green-600" x-text="'-' + order.current_user_summary.discount_share.toFixed(2) + '€'"></span>
+            </div>
+        </div>
+        
+        <div class="border-t border-blue-200 pt-3 mb-4">
+            <div class="flex justify-between items-center text-lg font-bold text-blue-900">
+                <span>TOTAL À PAYER:</span>
+                <span x-text="order.current_user_summary.total.toFixed(2) + '€'"></span>
+            </div>
+            <div class="text-sm text-blue-700 mt-1">
+                <strong>Moment du paiement:</strong> <span x-text="order.payment_timing"></span>
+            </div>
+        </div>
+        
+        <div x-show="!userValidated" class="space-y-3">
+            <label class="flex items-center space-x-2">
+                <input type="checkbox" x-model="validationAgreement" class="rounded">
+                <span class="text-sm">Je suis d'accord avec le tableau récapitulatif ci-dessus</span>
+            </label>
+            <button @click="validateUserParticipation()" :disabled="!validationAgreement"
+                    class="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                ✅ Je valide ma participation
+            </button>
+        </div>
+        <div x-show="userValidated" class="text-center p-3 bg-green-100 text-green-800 rounded-lg">
+            ✅ Vous avez validé votre participation
         </div>
     </div>
 
-    <!-- Placeholder content -->
-    <div class="text-center py-8 text-gray-500">
-        <div class="text-4xl mb-2">🚧</div>
-        <p>Section validation en cours de développement</p>
+    <!-- Validation status for all participants -->
+    <div class="bg-gray-50 rounded-lg p-4">
+        <h4 class="font-semibold text-gray-900 mb-3">État des validations</h4>
+        <div class="space-y-2">
+            <template x-for="participant in order.participants" :key="participant.id + '_validation_status'">
+                <div class="flex justify-between items-center">
+                    <span x-text="participant.username + (participant.is_creator ? ' 👑' : '')"></span>
+                    <span x-show="participant.is_creator" class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                        Auto-validé (créateur)
+                    </span>
+                    <span x-show="!participant.is_creator && isParticipantValidated(participant.id)" 
+                            class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                        ✅ Validé
+                    </span>
+                    <span x-show="!participant.is_creator && !isParticipantValidated(participant.id)" 
+                            class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">
+                        ⏳ En attente
+                    </span>
+                </div>
+            </template>
+        </div>
     </div>
 </div>
