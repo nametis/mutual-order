@@ -1,0 +1,31 @@
+<!-- My Order Summary -->
+<div class="bg-white rounded-lg shadow p-6">
+    <h3 class="text-lg font-semibold">Ma commande</h3>
+    <div class="space-y-3  mb-4">
+        <div class="flex justify-between">
+            <span>Nombre de disques</span>
+            <span class="font-semibold" x-text="order.current_user_summary ? order.current_user_summary.listings_count : 0"></span>
+        </div>
+        <div class="flex justify-between">
+            <span>Montant</span>
+            <span class="font-semibold" x-text="order.current_user_summary ? order.current_user_summary.subtotal.toFixed(2) + '€' : '0€'"></span>
+        </div>
+        <div class="flex justify-between">
+            <span>Ma part Frais & Taxes</span>
+            <span class="font-semibold" x-text="order.current_user_summary ? order.current_user_summary.fees_share.toFixed(2) + '€' : '0€'"></span>
+        </div>
+        <div x-show="order.current_user_summary && order.current_user_summary.discount_share > 0" class="flex justify-between">
+            <span>Ma part Discount</span>
+            <span class="font-semibold text-green-600" x-text="order.current_user_summary ? '-' + order.current_user_summary.discount_share.toFixed(2) + '€' : '0€'"></span>
+        </div>
+        <div x-show="order.current_user_summary && order.current_user_summary.listings_count > 0" class="text-right">
+            <span class="text-sm text-gray-500 italic" 
+                    x-text="order.current_user_summary ? '(Soit ' + ((order.current_user_summary.fees_share - order.current_user_summary.discount_share) / order.current_user_summary.listings_count).toFixed(2) + '€ de frais par disque)' : ''"></span>
+        </div>
+        <hr class="my-3">
+        <div class="flex justify-between font-bold text-lg">
+            <span>Total</span>
+            <span x-text="order.current_user_summary ? order.current_user_summary.total.toFixed(2) + '€' : '0€'"></span>
+        </div>
+    </div>
+</div>
