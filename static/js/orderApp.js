@@ -192,6 +192,7 @@ function orderApp() {
         },
 
         toggleChat() {
+            console.log('toggleChat fired', this.showChat);
             this.showChat = !this.showChat;
             if (this.showChat) { this.loadChatMessages(); this.markMessagesAsRead(); }
         },

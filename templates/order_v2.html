@@ -21,7 +21,7 @@
 <script src="{{ url_for('static', filename='js/orderApp.js') }}"></script>
 
 <!-- Alpine component wrapper -->
-<div x-data="orderApp()" x-init="init()" class="min-h-screen">
+<div x-data="orderApp()" x-init="init() console.log('Alpine component loaded, showChat =', showChat)" class="min-h-screen">
 
     <div x-show="!loading" x-cloak class="max-w-7xl mx-auto px-4 py-6">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
