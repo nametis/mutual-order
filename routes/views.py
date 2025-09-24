@@ -265,6 +265,6 @@ def clear_cache():
 def view_order_v2(order_id):
     """View specific order details - New modular version"""
     order = Order.query.get_or_404(order_id)
-    current_user = auth_service.get_current_user()
+    user = auth_service.get_current_user()
     
-    return render_template('order_v2.html', order=order, current_user=current_user)
+    return render_template('order_v2.html', order=order, user=user)
