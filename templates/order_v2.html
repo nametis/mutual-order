@@ -15,7 +15,7 @@
 <script>
     window.currentUserId = {{ current_user.id }};
     window.isAdmin = {{ 'true' if current_user.is_admin else 'false' }};
-    window.orderData = {{ order | tojson }};
+    window.orderData = {{ order | tojson | safe }};
 </script>
 
 <!-- Include the static JS -->
