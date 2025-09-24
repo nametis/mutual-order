@@ -1,17 +1,28 @@
+<!-- Participants -->
 <div class="bg-white rounded-lg shadow p-6">
-    <div class="flex items-center justify-between mb-6">
-        <h3 class="flex items-center space-x-2 text-xl font-bold text-gray-900">
-            <span class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">⏳</span>
-            <span>WIP</span>
-        </h3>
-        <div class="bg-blue-50 px-3 py-1 rounded-full text-blue-700 text-sm font-medium">
-            En cours
+    <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-2">
+            <span>👥</span>
+            <h3 class="text-lg font-semibold" x-text="'Participants (' + order.participants_count + ')'"></h3>
         </div>
+        <button  x-show="order.status === 'building'" @click="toggleChat()"
+            class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 text-base transition-colors">
+            <span>💬</span>
+            <span>Chat</span>
+            <span x-show="unreadCount > 0"
+                class="ml-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                <span x-text="unreadCount > 99 ? '99+' : unreadCount"></span>
+            </span>
+        </button>
     </div>
-
-    <!-- Placeholder content -->
-    <div class="text-center py-8 text-gray-500">
-        <div class="text-4xl mb-2">🚧</div>
-        <p>Section validation en cours de développement</p>
+    
+    <div class="flex flex-wrap gap-2">
+        <template x-for="participant in order.participants" :key="participant.id">
+            <div class="px-3 py-1 rounded-full text-sm flex items-center"
+                :class="participant.is_creator ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'">
+                <span x-text="participant.username"></span>
+                <span x-show="participant.is_creator" class="ml-1">👑</span>
+            </div>
+        </template>
     </div>
 </div>

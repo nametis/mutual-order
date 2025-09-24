@@ -27,7 +27,6 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             <!-- Main Content - 2/3 width -->
             <div class="lg:col-span-2">
-                <!-- Info Section -->
                 {% include 'components/order_v2/info_section.html' %}
                 {% include 'components/order_v2/add_listing_section.html' %} 
                 {% include 'components/order_v2/validation_section.html' %}
@@ -35,45 +34,12 @@
                 {% include 'components/order_v2/listings_section.html' %}
 
             </div>
-            
-            <div class="grid grid-cols-2 gap-4 mb-6">
-                <div class="bg-gray-100 p-4 rounded">
-                    <h3 class="font-semibold">Statut</h3>
-                    <p>{{ order.status }}</p>
-                </div>
-                <div class="bg-gray-100 p-4 rounded">
-                    <h3 class="font-semibold">Créateur</h3>
-                    <p>{{ order.creator.username }}</p>
-                </div>
+
+            <!-- Right Panel - 1/3 width -->
+            <div class="space-y-6">
+                {% include 'components/order_v2/status_section.html' %}
+                {% include 'components/order_v2/participants_section.html' %}
             </div>
-            
-            <div class="flex space-x-4">
-                <a href="/order/{{ order.id }}" class="bg-blue-600 text-white px-4 py-2 rounded">
-                    Retour à la version originale
-                </a>
-                <a href="/" class="bg-gray-600 text-white px-4 py-2 rounded">
-                    Dashboard
-                </a>
-            </div>
-        </div>
-
-        <!-- Test current_user authentication -->
-        <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-            <h3 class="font-semibold text-green-800">Debug Info</h3>
-            <p>Current User: {{ current_user.username if current_user else 'None' }}</p>
-            <p>User ID: {{ current_user.id if current_user else 'None' }}</p>
-            <p>Is Admin: {{ current_user.is_admin if current_user else 'False' }}</p>
-            <p>Order ID: {{ order.id }}</p>
-        </div>
-
-        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <h3 class="font-semibold text-yellow-800">Context Processor Debug</h3>
-            <p>Global current_user: {{ current_user.username if current_user else 'None' }}</p>
-            <p>Type of current_user: {{ current_user.__class__.__name__ if current_user else 'NoneType' }}</p>
-            <p>User auth: {{ current_user.is_authenticated if current_user else 'NoneType' }}</p>
-        </div>
-
-
         </div>
     </div>
 
