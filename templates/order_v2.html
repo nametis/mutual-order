@@ -16,6 +16,7 @@
 
 
 {% block content %}
+<div>
     <!-- Simple test content without Alpine.js for now -->
     <div class="bg-white rounded-lg shadow p-6 mb-6">
         <h1 class="text-2xl font-bold text-gray-900 mb-4">
@@ -58,7 +59,7 @@
         <p>Type of current_user: {{ current_user.__class__.__name__ if current_user else 'NoneType' }}</p>
         <p>User auth: {{ current_user.is_authenticated if current_user else 'NoneType' }}</p>
     </div>
-    
+
 </div>
 {% endblock %}
 
