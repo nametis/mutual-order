@@ -59,6 +59,9 @@ function orderApp() {
                     const data = await response.json();
                     this.userValidated = data.user_validated;
                     this.validations = data.all_validations || [];
+
+                    // Debug log:
+                    console.log('Validations loaded:', this.validations);
                 }
             } catch (error) {
                 console.error('Error loading validations:', error);
