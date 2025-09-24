@@ -1,0 +1,92 @@
+<!-- Chat Component Wrapper -->
+<div x-data="{
+        showFloating: false,
+        chatMessages: [],
+        newMessage: '',
+        async loadChat() {
+            try {
+                const response = await fetch(`/api/orders/${order.id}/chat/messages`);
+                if (response.ok) this.chatMessages = await response.json();
+            } catch(e) { console.error('Error loading chat', e) }
+        },
+        async sendMessage() {
+            if (!this.newMessage.trim()) return;
+            try {
+                const response = await fetch(`/api/orders/${order.id}/chat/send`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: this.newMessage })
+                });
+                if (response.ok) {
+                    this.newMessage = '';
+                    await this.loadChat();
+                    this.$nextTick(() => {
+                        if(this.$refs.embeddedScroll) this.$refs.embeddedScroll.scrollTop = this.$refs.embeddedScroll.scrollHeight;
+                        if(this.$refs.floatingScroll) this.$refs.floatingScroll.scrollTop = this.$refs.floatingScroll.scrollHeight;
+                    });
+                }
+            } catch(e) { console.error('Error sending chat message', e) }
+        }
+    }"
+    x-init="loadChat()"
+    x-ref="chatComp"
+    class="space-y-6">
+
+    <!-- Embedded Chat (inside main content) -->
+    <div x-show="['validation','ordered','delivered','closed'].includes(order.status)" class="bg-white rounded-lg shadow mt-6">
+        <div class="bg-blue-600 text-white p-4 rounded-t-lg">
+            <h3 class="font-semibold">💬 Discussion de la commande</h3>
+        </div>
+        <div class="max-h-96 overflow-y-auto p-4 space-y-4" x-ref="embeddedScroll">
+            <template x-for="msg in chatMessages.slice(-10)" :key="msg.id">
+                <div class="max-w-xs p-3 rounded-lg" :class="msg.is_own ? 'bg-blue-100 ml-auto' : 'bg-gray-100'">
+                    <div class="font-semibold text-sm" x-text="msg.username"></div>
+                    <div class="text-sm" x-text="msg.content"></div>
+                    <div class="text-xs text-gray-500 mt-1" x-text="msg.timestamp"></div>
+                </div>
+            </template>
+            <div x-show="chatMessages.length === 0" class="text-center text-gray-500 py-8">
+                Aucun message pour le moment. Soyez le premier à écrire !
+            </div>
+        </div>
+
+        <!-- Optional Send Input in embedded chat -->
+        <div class="border-t p-4 flex space-x-2">
+            <input x-model="newMessage" @keydown.enter="sendMessage()" 
+                   type="text" placeholder="Votre message..." maxlength="500"
+                   class="flex-1 px-3 py-2 border rounded-full focus:ring-2 focus:ring-blue-500">
+            <button @click="sendMessage()" class="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700">
+                📤
+            </button>
+        </div>
+    </div>
+
+    <!-- Floating Chat Panel -->
+    <div x-show="showFloating" x-cloak
+        class="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end">
+        <div @click.stop class="w-96 h-full bg-white flex flex-col rounded-l-lg shadow-xl">
+            <div class="bg-blue-600 text-white p-4 flex justify-between items-center rounded-t-lg">
+                <h3 class="font-semibold">💬 Discussion</h3>
+                <button @click="showFloating = false" class="text-white hover:text-gray-200">✕</button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4 space-y-4" x-ref="floatingScroll">
+                <template x-for="msg in chatMessages" :key="msg.id">
+                    <div class="max-w-xs p-3 rounded-lg" :class="msg.is_own ? 'bg-blue-100 ml-auto' : 'bg-gray-100'">
+                        <div class="font-semibold text-sm" x-text="msg.username"></div>
+                        <div class="text-sm" x-text="msg.content"></div>
+                        <div class="text-xs text-gray-500 mt-1" x-text="msg.timestamp"></div>
+                    </div>
+                </template>
+            </div>
+            <div class="border-t p-4 flex space-x-2">
+                <input x-model="newMessage" @keydown.enter="sendMessage()" 
+                       type="text" placeholder="Votre message..." maxlength="500"
+                       class="flex-1 px-3 py-2 border rounded-full focus:ring-2 focus:ring-blue-500">
+                <button @click="sendMessage()" class="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700">
+                    📤
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
