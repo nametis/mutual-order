@@ -11,7 +11,6 @@
 {% endblock %}
 
 {% block content %}
-<!-- Pass server-side data to JS -->
 <script>
     window.currentUserId = {{ current_user.id }};
     window.isAdmin = {{ 'true' if current_user.is_admin else 'false' }};
@@ -21,14 +20,19 @@
 <!-- Include the static JS -->
 <script src="{{ url_for('static', filename='js/orderApp.js') }}"></script>
 
-<div x-show="!loading" x-cloak class="max-w-7xl mx-auto px-4 py-6">
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <!-- Main Content - 2/3 width -->
-        <div class="lg:col-span-2">
-            <!-- Info Section -->
-            {% include 'components/order_v2/info_section.html' %}
+<!-- Alpine component wrapper -->
+<div x-data="orderApp()" x-init="init()" class="min-h-screen">
+
+    <div x-show="!loading" x-cloak class="max-w-7xl mx-auto px-4 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            <!-- Main Content - 2/3 width -->
+            <div class="lg:col-span-2">
+                <!-- Info Section -->
+                {% include 'components/order_v2/info_section.html' %}
+            </div>
         </div>
     </div>
+
 </div>
 
 
