@@ -13,26 +13,25 @@
 {% block content %}
 <script src="{{ url_for('static', filename='js/orderApp.js') }}"></script>
 
-<div x-data="orderApp()" x-init="init()" class="min-h-screen relative">
-
-    <div x-show="!loading" x-cloak class="max-w-7xl mx-auto px-4 py-6">
+<div x-data="orderApp()" x-init="init()" class="min-h-screen">
+    <div x-show="!loading" x-cloak>
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-
-            <div class="lg:col-span-2 space-y-6">
+            <!-- Left/Main Column -->
+            <div class="lg:col-span-2">
                 {% include 'components/order_v2/info_section.html' %}
-                {% include 'components/order_v2/add_listing_section.html' %}
+                {% include 'components/order_v2/add_listing_section.html' %} 
                 {% include 'components/order_v2/validation_section.html' %}
-                {% include 'components/order_v2/listings_section.html' %}
                 {% include 'components/order_v2/chat.html' %}
+                {% include 'components/order_v2/listings_section.html' %}
             </div>
 
+            <!-- Right Column -->
             <div class="space-y-6">
                 {% include 'components/order_v2/status_section.html' %}
                 {% include 'components/order_v2/participants_section.html' %}
                 {% include 'components/order_v2/order_summary_section.html' %}
                 {% include 'components/order_v2/admin_section.html' %}
             </div>
-
         </div>
     </div>
 </div>
