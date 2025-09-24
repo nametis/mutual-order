@@ -1,176 +1,135 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Responsive Order Components</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
-    <style>[x-cloak] { display: none !important; }</style>
-</head>
-<body class="bg-gray-50 p-4">
-
-<!-- RESPONSIVE INFO SECTION -->
-<div class="bg-white rounded-lg shadow p-4 sm:p-6 mb-6" x-data="{ 
-    order: { seller_name: 'Energy.ctrl.center', available_count: 5, participants_count: 3, direct_url: 'https://example.com' },
-    sellerInfo: { rating: 100, location: 'Nantes' }
-}">
-    <!-- Header Section - Responsive Stack -->
-    <div class="space-y-3 mb-4 sm:mb-6">
-        <!-- Title Row -->
-        <div class="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4">
-            <h1 class="text-xl sm:text-2xl font-bold text-gray-900 min-w-0">
-                Commande chez Energy.ctrl.center
-            </h1>
-            
-            <!-- Rating Badge -->
-            <div class="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded-full self-start">
-                <span class="text-yellow-500">⭐</span>
-                <span class="text-sm font-medium">100%</span>
-            </div>
-            
-            <!-- Location Badge -->
-            <div class="flex items-center space-x-1 text-gray-600 bg-gray-100 px-2 py-1 rounded-full self-start">
-                <span>📍</span>
-                <span class="text-sm">Nantes</span>
-            </div>
+<!-- Combined Seller Info and Stats -->
+<div class="bg-white rounded-lg shadow p-4 sm:p-6">
+    
+    <!-- Header line with seller info and actions - Desktop: single line, Mobile: wrapping -->
+    <div class="flex flex-wrap items-baseline gap-2 sm:gap-4 mb-3">
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 min-w-0" x-text="'Commande chez ' + order.seller_name"></h1>
+        
+        <!-- Rating Badge -->
+        <div x-show="sellerInfo.rating" class="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded-full">
+            <span class="text-yellow-500">⭐</span>
+            <span class="text-sm font-medium" x-text="sellerInfo.rating ? sellerInfo.rating.toFixed(0) + '%' : ''"></span>
         </div>
         
-        <!-- Action Buttons Row - Wrapping on Mobile -->
-        <div class="flex flex-wrap gap-2">
-            <a href="#" class="flex items-center space-x-1 px-3 py-1 bg-white border border-black rounded-full text-black hover:bg-gray-50 text-xs transition-colors">
-                <span>👤</span>
-                <span>Profil Discogs</span>
-            </a>
-            
-            <a href="#" class="flex items-center space-x-1 px-3 py-1 bg-white border border-black rounded-full text-black hover:bg-gray-50 text-xs transition-colors">
-                <span>🔗</span>
-                <span>Site vendeur</span>
-            </a>
+        <!-- Location Badge -->
+        <div x-show="sellerInfo.location && sellerInfo.location !== 'Non spécifiée'" class="flex items-center space-x-1 text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
+            <span>📍</span>
+            <span class="text-sm" x-text="sellerInfo.location"></span>
         </div>
+        
+        <!-- Action Buttons - Keep on same line on desktop, wrap on mobile -->
+        <a :href="'https://www.discogs.com/user/' + order.seller_name" target="_blank" 
+           class="flex items-center space-x-1 px-3 py-1 bg-white border border-black rounded-full text-black hover:bg-gray-50 text-xs transition-colors">
+            <span>👤</span>
+            <span>Profil Discogs</span>
+        </a>
+        
+        <a x-show="order.direct_url" :href="order.direct_url" target="_blank"
+           class="flex items-center space-x-1 px-3 py-1 bg-white border border-black rounded-full text-black hover:bg-gray-50 text-xs transition-colors">
+            <span>🔗</span>
+            <span>Site vendeur</span>
+        </a>
     </div>
 
-    <!-- Stats Grid - Mobile Responsive -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2 mb-4">
-        <!-- Disques -->
+    <!-- Stats Grid - Mobile: 2 cols, Tablet: 3 cols, Desktop: 7 cols (original) -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-2">
+        
+        <!-- Number of discs -->
         <div class="p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
             <div class="flex items-center space-x-1 mb-1">
                 <span class="text-sm sm:text-md">💿</span>
-                <span class="text-lg font-bold text-gray-900">5</span>
+                <span class="text-lg font-bold text-gray-900" x-text="order.available_count"></span>
             </div>
             <span class="text-xs font-medium text-gray-700">Disques</span>
         </div>
         
-        <!-- Participants -->
+        <!-- Number of participants -->
         <div class="p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
             <div class="flex items-center space-x-1 mb-1">
                 <span class="text-sm">👥</span>
-                <span class="text-lg font-bold text-gray-900">3</span>
+                <span class="text-lg font-bold text-gray-900" x-text="order.participants_count"></span>
             </div>
             <span class="text-xs font-medium text-gray-700">Participants</span>
-        </div>
-        
-        <!-- Time Remaining -->
+        </div>                            
+
+        <!-- Time remaining until deadline - EDITABLE -->
         <div class="relative p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
-            <button class="absolute top-1 right-1 text-xs text-gray-600 hover:text-black transition-colors">✏️</button>
+            <!-- Edit pen icon -->
+            <button x-show="order.creator_id === currentUserId || isAdmin" 
+                    @click="editField = 'deadline'"
+                    class="absolute top-1 right-1 text-xs text-gray-600 hover:text-black transition-colors">
+                ✏️
+            </button>
             <div class="flex items-center space-x-1 mb-1">
                 <span class="text-sm">🕒</span>
-                <span class="text-sm font-bold text-gray-900">2j</span>
+                <span class="text-sm font-bold text-gray-900" 
+                      x-text="order.deadline ? calculateTimeRemaining(order.deadline) : 'N/A'"></span>
             </div>
             <span class="text-xs font-medium text-gray-700">Restant</span>
         </div>
-        
+
         <!-- Creator -->
         <div class="p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
             <div class="flex items-center space-x-1 mb-1">
                 <span class="text-sm">👑</span>
-                <span class="text-sm font-bold text-gray-900">thie</span>
+                <span class="text-sm font-bold text-gray-900" x-text="order.creator_username || 'N/A'"></span>
             </div>
             <span class="text-xs font-medium text-gray-700">Créateur</span>
         </div>
-        
-        <!-- PayPal Me -->
-        <div class="relative p-2 sm:p-3 bg-blue-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px] cursor-pointer hover:bg-blue-200">
-            <button class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">✏️</button>
+
+        <!-- PayPal Me link - EDITABLE -->
+        <div class="relative p-2 sm:p-3 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]"
+             :class="order.paypal_link ? 'bg-blue-100 cursor-pointer hover:bg-blue-200' : 'bg-gray-100'"
+             @click="order.paypal_link && editField !== 'paypal' ? window.open(order.paypal_link, '_blank') : null">
+            <!-- Edit pen icon -->
+            <button x-show="order.creator_id === currentUserId || isAdmin" 
+                    @click.stop="editField = 'paypal'"
+                    class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                ✏️
+            </button>
             <div class="flex items-center space-x-1 mb-1">
                 <span class="text-sm">💳</span>
-                <span class="text-sm font-bold text-blue-600">Actif</span>
+                <span class="text-sm font-bold" 
+                      :class="order.paypal_link ? 'text-blue-600' : 'text-gray-400'"
+                      x-text="order.paypal_link ? 'Actif' : 'N/A'"></span>
             </div>
             <span class="text-xs font-medium text-gray-700">PayPal Me</span>
         </div>
         
-        <!-- Discount -->
+        <!-- Discount - EDITABLE -->
         <div class="relative p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
-            <button class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">✏️</button>
+            <!-- Edit pen icon -->
+            <button x-show="order.creator_id === currentUserId || isAdmin" 
+                    @click="editField = 'discount'"
+                    class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                ✏️
+            </button>
             <div class="flex items-center space-x-1 mb-1">
                 <span class="text-sm">💸</span>
-                <span class="text-lg font-bold text-gray-400">0€</span>
+                <span class="text-lg font-bold" 
+                      :class="order.discount && order.discount > 0 ? 'text-green-600' : 'text-gray-400'"
+                      x-text="order.discount && order.discount > 0 ? order.discount.toFixed(2) + '€' : '0€'"></span>
             </div>
             <span class="text-xs font-medium text-gray-700">Discount</span>
         </div>
         
-        <!-- Shipping & Taxes - Full width on mobile, 3 cols on desktop -->
-        <div class="relative col-span-2 sm:col-span-3 lg:col-span-3 p-2 sm:p-3 bg-gray-100 rounded flex flex-col sm:flex-row items-center justify-between min-h-[60px] sm:min-h-[70px]">
-            <button class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">✏️</button>
+        <!-- Shipping & Taxes - spans multiple columns - EDITABLE -->
+        <div class="relative col-span-2 sm:col-span-3 xl:col-span-3 p-2 sm:p-3 bg-gray-100 rounded flex flex-col sm:flex-row items-center justify-between min-h-[60px] sm:min-h-[70px]">
+            <!-- Edit pen icon -->
+            <button x-show="order.creator_id === currentUserId || isAdmin" 
+                    @click="editField = 'fees'"
+                    class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                ✏️
+            </button>
             <div class="flex items-center space-x-1 mb-2 sm:mb-0">
                 <span class="text-sm">📦</span>
                 <span class="text-sm font-medium text-gray-700">Frais de port + Taxes :</span>
             </div>
             <div class="text-center sm:text-right">
-                <div class="text-lg font-bold text-gray-900">20.00€</div>
-                <div class="text-xs text-gray-500">(4.00€/disque)</div>
+                <div class="text-lg font-bold text-gray-900" x-text="(order.shipping_cost + order.taxes).toFixed(2) + '€'"></div>
+                <div class="text-xs text-gray-500" 
+                     x-text="order.available_count > 0 ? '(' + ((order.shipping_cost + order.taxes) / order.available_count).toFixed(2) + '€/disque)' : ''"></div>
             </div>
         </div>
     </div>
 </div>
-
-<!-- RESPONSIVE ADD LISTING SECTION -->
-<div class="bg-white rounded-lg shadow p-4 sm:p-6" x-data="{ newListingUrl: '' }">
-    <!-- Header Section - Mobile Responsive -->
-    <div class="flex flex-col sm:flex-row sm:items-baseline gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <!-- Title -->
-        <h3 class="flex items-center space-x-2 text-lg sm:text-xl font-bold text-gray-900">
-            <span class="bg-yellow-100 px-3 py-1 rounded-full flex items-center space-x-1">
-                <span>➕</span>
-                <span>Ajouter un disque</span>
-            </span>
-        </h3>
-        
-        <!-- Seller Profile Button -->
-        <a href="#" class="flex items-center space-x-1 px-3 py-1 bg-white border border-black rounded-full text-black hover:bg-gray-50 text-xs transition-colors self-start">
-            <span>👤</span>
-            <span class="whitespace-nowrap">Voir les autres disques du vendeur</span>
-        </a>
-    </div>
-    
-    <!-- Input Section - Responsive Stack -->
-    <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
-        <input 
-            x-model="newListingUrl" 
-            type="url" 
-            placeholder="Coller l'URL de l'annonce Discogs..."
-            class="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 text-sm sm:text-base">
-        
-        <button 
-            class="px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors font-medium whitespace-nowrap">
-            Ajouter à la commande
-        </button>
-    </div>
-</div>
-
-<!-- Mobile Breakpoint Indicators (for development) -->
-<div class="fixed bottom-4 right-4 bg-black text-white px-3 py-1 rounded text-xs">
-    <span class="sm:hidden">XS</span>
-    <span class="hidden sm:inline lg:hidden">SM</span>
-    <span class="hidden lg:inline">LG</span>
-</div>
-
-<script>
-// Sample data simulation
-document.addEventListener('alpine:init', () => {
-    console.log('Alpine.js initialized for responsive demo');
-});
-</script>
-
-</body>
-</html>
