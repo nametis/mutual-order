@@ -1,161 +1,158 @@
-<!-- Combined Seller Info and Stats -->
-<div class="bg-white rounded-lg shadow p-6">
-    <!-- Header line with seller info and actions -->
-    <div class="flex items-baseline space-x-4 mb-3">
-        <h1 class="text-2xl font-bold text-gray-900" x-text="'Commande chez ' + order.seller_name"></h1>
-        
-        <div x-show="sellerInfo.rating" class="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded-full">
-            <span class="text-yellow-500">⭐</span>
-            <span class="text-sm font-medium" x-text="sellerInfo.rating ? sellerInfo.rating.toFixed(0) + '%' : ''"></span>
+<!-- Header line with seller info and actions -->
+<div class="flex items-baseline space-x-4 mb-3">
+    <h1 class="text-2xl font-bold text-gray-900" x-text="'Commande chez ' + order.seller_name"></h1>
+    
+    <div x-show="sellerInfo.rating" class="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded-full">
+        <span class="text-yellow-500">⭐</span>
+        <span class="text-sm font-medium" x-text="sellerInfo.rating ? sellerInfo.rating.toFixed(0) + '%' : ''"></span>
+    </div>
+    
+    <div x-show="sellerInfo.location && sellerInfo.location !== 'Non spécifiée'" class="flex items-center space-x-1 text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
+        <span>📍</span>
+        <span class="text-sm" x-text="sellerInfo.location"></span>
+    </div>
+    
+    <a :href="'https://www.discogs.com/user/' + order.seller_name" target="_blank" 
+    class="flex items-center space-x-1 px-3 py-1 bg-white border border-black rounded-full text-black hover:bg-gray-50 text-xs transition-colors">
+        <span>👤</span>
+        <span>Profil Discogs</span>
+    </a>
+    
+    <a x-show="order.direct_url" :href="order.direct_url" target="_blank"
+    class="flex items-center space-x-1 px-3 py-1 bg-white border border-black rounded-full text-black hover:bg-gray-50 text-xs transition-colors">
+        <span>🔗</span>
+        <span>Site vendeur</span>
+    </a>
+</div>
+
+<!-- Main content grid -->
+<!-- Left side: Info blocks (8 columns, 3x2 grid) -->
+<div class="col-span-8 grid grid-cols-7 gap-2">                               
+    <!-- Number of discs -->
+    <div class="p-2 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[50px]">
+        <div class="flex items-center space-x-1 mb-1">
+            <span class="text-md">💿</span>
+            <span class="text-lg font-bold text-gray-900" x-text="order.available_count"></span>
         </div>
-        
-        <div x-show="sellerInfo.location && sellerInfo.location !== 'Non spécifiée'" class="flex items-center space-x-1 text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
-            <span>📍</span>
-            <span class="text-sm" x-text="sellerInfo.location"></span>
+        <span class="text-xs font-medium text-gray-700">Disques</span>
+    </div>
+    
+    <!-- Number of participants -->
+    <div class="p-2 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[50px]">
+        <div class="flex items-center space-x-1 mb-1">
+            <span class="text-sm">👥</span>
+            <span class="text-lg font-bold text-gray-900" x-text="order.participants_count"></span>
         </div>
-        
-        <a :href="'https://www.discogs.com/user/' + order.seller_name" target="_blank" 
-        class="flex items-center space-x-1 px-3 py-1 bg-white border border-black rounded-full text-black hover:bg-gray-50 text-xs transition-colors">
-            <span>👤</span>
-            <span>Profil Discogs</span>
-        </a>
-        
-        <a x-show="order.direct_url" :href="order.direct_url" target="_blank"
-        class="flex items-center space-x-1 px-3 py-1 bg-white border border-black rounded-full text-black hover:bg-gray-50 text-xs transition-colors">
-            <span>🔗</span>
-            <span>Site vendeur</span>
-        </a>
+        <span class="text-xs font-medium text-gray-700">Participants</span>
+    </div>                            
+
+    <!-- Time remaining until deadline - EDITABLE -->
+    <div class="relative p-2 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[50px]">
+        <!-- Edit pen icon -->
+        <button x-show="order.creator_id === currentUserId || isAdmin" 
+                @click="editField = 'deadline'"
+                class="absolute top-1 right-1 text-xs text-gray-600 hover:text-black transition-colors">
+            ✏️
+        </button>
+        <div class="flex items-center space-x-1 mb-1">
+            <span class="text-sm">🕒</span>
+            <span class="text-sm font-bold text-gray-900" 
+                x-text="order.deadline ? Math.max(0, Math.ceil((new Date(order.deadline) - new Date()) / (1000 * 60 * 60 * 24))) + 'j' : 'N/A'"></span>
+        </div>
+        <span class="text-xs font-medium text-gray-700">Restants</span>
+    </div>
+    
+    <!-- Creator -->
+    <div class="p-2 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[50px]">
+        <div class="flex items-center space-x-1 mb-1">
+            <span class="text-sm">👑</span>
+            <span class="text-sm font-bold text-gray-900 leading-tight" x-text="order.creator?.username"></span>
+        </div>
+        <span class="text-xs font-medium text-gray-700">Créateur</span>
     </div>
 
-    <!-- Main content grid -->
-    <!-- Left side: Info blocks (8 columns, 3x2 grid) -->
-    <div class="col-span-8 grid grid-cols-7 gap-2">                               
-        <!-- Number of discs -->
-        <div class="p-2 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[50px]">
-            <div class="flex items-center space-x-1 mb-1">
-                <span class="text-md">💿</span>
-                <span class="text-lg font-bold text-gray-900" x-text="order.available_count"></span>
-            </div>
-            <span class="text-xs font-medium text-gray-700">Disques</span>
+    <!-- Location - EDITABLE -->
+    <div class="relative p-2 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[50px]">
+        <!-- Edit pen icon -->
+        <button x-show="order.creator_id === currentUserId || isAdmin" 
+                @click="editField = 'location'"
+                class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+            ✏️
+        </button>
+        <div class="flex items-center space-x-1 mb-1">
+            <span class="text-sm">🏠</span>
+            <span class="text-xs font-bold text-gray-900 leading-tight" 
+                x-text="order.user_location || 'N/A'"></span>
         </div>
-        
-        <!-- Number of participants -->
-        <div class="p-2 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[50px]">
-            <div class="flex items-center space-x-1 mb-1">
-                <span class="text-sm">👥</span>
-                <span class="text-lg font-bold text-gray-900" x-text="order.participants_count"></span>
-            </div>
-            <span class="text-xs font-medium text-gray-700">Participants</span>
-        </div>                            
+        <span class="text-xs font-medium text-gray-700">Localisation</span>
+    </div>
 
-        <!-- Time remaining until deadline - EDITABLE -->
-        <div class="relative p-2 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[50px]">
-            <!-- Edit pen icon -->
-            <button x-show="order.creator_id === currentUserId || isAdmin" 
-                    @click="editField = 'deadline'"
-                    class="absolute top-1 right-1 text-xs text-gray-600 hover:text-black transition-colors">
-                ✏️
-            </button>
-            <div class="flex items-center space-x-1 mb-1">
-                <span class="text-sm">🕒</span>
-                <span class="text-sm font-bold text-gray-900" 
-                    x-text="order.deadline ? Math.max(0, Math.ceil((new Date(order.deadline) - new Date()) / (1000 * 60 * 60 * 24))) + 'j' : 'N/A'"></span>
-            </div>
-            <span class="text-xs font-medium text-gray-700">Restants</span>
+    <!-- Payment rule - EDITABLE -->
+    <div class="relative p-2 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[50px]">
+        <!-- Edit pen icon -->
+        <button x-show="order.creator_id === currentUserId || isAdmin" 
+                @click="editField = 'payment'"
+                class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+            ✏️
+        </button>
+        <div class="flex items-center space-x-1 mb-1">
+            <span class="text-xs font-medium text-gray-900 leading-tight">💳 Paiement</span>
         </div>
-        
-        <!-- Creator -->
-        <div class="p-2 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[50px]">
-            <div class="flex items-center space-x-1 mb-1">
-                <span class="text-sm">👑</span>
-                <span class="text-sm font-bold text-gray-900 leading-tight" x-text="order.creator?.username"></span>
-            </div>
-            <span class="text-xs font-medium text-gray-700">Créateur</span>
-        </div>
+        <span class="text-sm font-bold text-gray-700" x-text="order.payment_timing"></span>
+    </div>
 
-        <!-- Location - EDITABLE -->
-        <div class="relative p-2 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[50px]">
-            <!-- Edit pen icon -->
-            <button x-show="order.creator_id === currentUserId || isAdmin" 
-                    @click="editField = 'location'"
-                    class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-                ✏️
-            </button>
-            <div class="flex items-center space-x-1 mb-1">
-                <span class="text-sm">🏠</span>
-                <span class="text-xs font-bold text-gray-900 leading-tight" 
-                    x-text="order.user_location || 'N/A'"></span>
-            </div>
-            <span class="text-xs font-medium text-gray-700">Localisation</span>
+    <!-- PayPal Me - EDITABLE -->
+    <div class="relative p-2 rounded text-center flex flex-col items-center justify-center min-h-[50px]"
+        :class="order.paypal_link ? 'bg-blue-100 cursor-pointer hover:bg-blue-200' : 'bg-gray-100'"
+        @click="order.paypal_link && editField !== 'paypal' ? window.open(order.paypal_link, '_blank') : null">
+        <!-- Edit pen icon -->
+        <button x-show="order.creator_id === currentUserId || isAdmin" 
+                @click.stop="editField = 'paypal'"
+                class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+            ✏️
+        </button>
+        <div class="flex items-center space-x-1 mb-1">
+            <span class="text-sm">💳</span>
+            <span class="text-sm font-bold" 
+                :class="order.paypal_link ? 'text-blue-600' : 'text-gray-400'"
+                x-text="order.paypal_link ? 'Actif' : 'N/A'"></span>
         </div>
-
-        <!-- Payment rule - EDITABLE -->
-        <div class="relative p-2 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[50px]">
-            <!-- Edit pen icon -->
-            <button x-show="order.creator_id === currentUserId || isAdmin" 
-                    @click="editField = 'payment'"
-                    class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-                ✏️
-            </button>
-            <div class="flex items-center space-x-1 mb-1">
-                <span class="text-xs font-medium text-gray-900 leading-tight">💳 Paiement</span>
-            </div>
-            <span class="text-sm font-bold text-gray-700" x-text="order.payment_timing"></span>
+        <span class="text-xs font-medium text-gray-700">PayPal Me</span>
+    </div>
+    
+    <!-- Discount - EDITABLE -->
+    <div class="relative p-2 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[50px]">
+        <!-- Edit pen icon -->
+        <button x-show="order.creator_id === currentUserId || isAdmin" 
+                @click="editField = 'discount'"
+                class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+            ✏️
+        </button>
+        <div class="flex items-center space-x-1 mb-1">
+            <span class="text-sm">💸</span>
+            <span class="text-lg font-bold" 
+                :class="order.discount && order.discount > 0 ? 'text-green-600' : 'text-gray-400'"
+                x-text="order.discount && order.discount > 0 ? order.discount.toFixed(2) + '€' : '0€'"></span>
         </div>
-
-        <!-- PayPal Me - EDITABLE -->
-        <div class="relative p-2 rounded text-center flex flex-col items-center justify-center min-h-[50px]"
-            :class="order.paypal_link ? 'bg-blue-100 cursor-pointer hover:bg-blue-200' : 'bg-gray-100'"
-            @click="order.paypal_link && editField !== 'paypal' ? window.open(order.paypal_link, '_blank') : null">
-            <!-- Edit pen icon -->
-            <button x-show="order.creator_id === currentUserId || isAdmin" 
-                    @click.stop="editField = 'paypal'"
-                    class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-                ✏️
-            </button>
-            <div class="flex items-center space-x-1 mb-1">
-                <span class="text-sm">💳</span>
-                <span class="text-sm font-bold" 
-                    :class="order.paypal_link ? 'text-blue-600' : 'text-gray-400'"
-                    x-text="order.paypal_link ? 'Actif' : 'N/A'"></span>
-            </div>
-            <span class="text-xs font-medium text-gray-700">PayPal Me</span>
+        <span class="text-xs font-medium text-gray-700">Discount</span>
+    </div>
+    
+    <!-- Shipping & Taxes - spans 3 columns - EDITABLE -->
+    <div class="relative col-span-3 p-2 bg-gray-100 rounded flex items-center justify-between min-h-[50px]">
+        <!-- Edit pen icon -->
+        <button x-show="order.creator_id === currentUserId || isAdmin" 
+                @click="editField = 'fees'"
+                class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+            ✏️
+        </button>
+        <div class="flex items-center space-x-1">
+            <span class="text-sm">📦</span>
+            <span class="text-sm font-medium text-gray-700">Frais de port + Taxes :</span>
         </div>
-        
-        <!-- Discount - EDITABLE -->
-        <div class="relative p-2 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[50px]">
-            <!-- Edit pen icon -->
-            <button x-show="order.creator_id === currentUserId || isAdmin" 
-                    @click="editField = 'discount'"
-                    class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-                ✏️
-            </button>
-            <div class="flex items-center space-x-1 mb-1">
-                <span class="text-sm">💸</span>
-                <span class="text-lg font-bold" 
-                    :class="order.discount && order.discount > 0 ? 'text-green-600' : 'text-gray-400'"
-                    x-text="order.discount && order.discount > 0 ? order.discount.toFixed(2) + '€' : '0€'"></span>
-            </div>
-            <span class="text-xs font-medium text-gray-700">Discount</span>
-        </div>
-        
-        <!-- Shipping & Taxes - spans 3 columns - EDITABLE -->
-        <div class="relative col-span-3 p-2 bg-gray-100 rounded flex items-center justify-between min-h-[50px]">
-            <!-- Edit pen icon -->
-            <button x-show="order.creator_id === currentUserId || isAdmin" 
-                    @click="editField = 'fees'"
-                    class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-                ✏️
-            </button>
-            <div class="flex items-center space-x-1">
-                <span class="text-sm">📦</span>
-                <span class="text-sm font-medium text-gray-700">Frais de port + Taxes :</span>
-            </div>
-            <div class="text-right">
-                <div class="text-lg font-bold text-gray-900" x-text="(order.shipping_cost + order.taxes).toFixed(2) + '€'"></div>
-                <div class="text-xs text-gray-500" 
-                    x-text="order.available_count > 0 ? '(' + ((order.shipping_cost + order.taxes) / order.available_count).toFixed(2) + '€/disque)' : ''"></div>
-            </div>
+        <div class="text-right">
+            <div class="text-lg font-bold text-gray-900" x-text="(order.shipping_cost + order.taxes).toFixed(2) + '€'"></div>
+            <div class="text-xs text-gray-500" 
+                x-text="order.available_count > 0 ? '(' + ((order.shipping_cost + order.taxes) / order.available_count).toFixed(2) + '€/disque)' : ''"></div>
         </div>
     </div>
 </div>
