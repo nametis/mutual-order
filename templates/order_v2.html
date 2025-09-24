@@ -4,7 +4,6 @@
 
 {% block head %}
 <script>
-    // Pass server-side data to JS
     window.currentUserId = {{ current_user.id }};
     window.isAdmin = {{ 'true' if current_user.is_admin else 'false' }};
     window.orderData = {{ order | tojson | safe }};
@@ -12,25 +11,21 @@
 {% endblock %}
 
 {% block content %}
-<!-- Include static JS -->
 <script src="{{ url_for('static', filename='js/orderApp.js') }}"></script>
 
-<!-- Alpine component wrapper -->
-<div x-data="orderApp()" x-init="init(); console.log('Alpine loaded, showChat =', showChat)" class="min-h-screen relative">
+<div x-data="orderApp()" x-init="init()" class="min-h-screen relative">
 
-    <!-- Main page content -->
     <div x-show="!loading" x-cloak class="max-w-7xl mx-auto px-4 py-6">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
-            <!-- Left/Main column -->
             <div class="lg:col-span-2 space-y-6">
                 {% include 'components/order_v2/info_section.html' %}
                 {% include 'components/order_v2/add_listing_section.html' %}
                 {% include 'components/order_v2/validation_section.html' %}
                 {% include 'components/order_v2/listings_section.html' %}
+                {% include 'components/order_v2/chat_embedded.html' %}
             </div>
 
-            <!-- Right column -->
             <div class="space-y-6">
                 {% include 'components/order_v2/status_section.html' %}
                 {% include 'components/order_v2/participants_section.html' %}
@@ -41,69 +36,6 @@
         </div>
     </div>
 
-    <!-- Floating Chat Panel -->
-    <div 
-        x-show="showChat"
-        x-transition.opacity
-        x-cloak
-        class="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end items-start p-4"
-        @click="toggleChat()"
-    >
-        <div 
-            @click.stop
-            class="w-96 max-h-full bg-white rounded-lg shadow-xl flex flex-col"
-        >
-            <!-- Chat Header -->
-            <div class="bg-blue-600 text-white p-4 rounded-t-lg flex justify-between items-center">
-                <div>
-                    <h3 class="font-semibold">💬 Discussion</h3>
-                    <p class="text-sm opacity-90" x-text="'Commande ' + order.seller_name"></p>
-                </div>
-                <button @click="toggleChat()" class="text-white hover:text-gray-200 font-bold">✕</button>
-            </div>
-
-            <!-- Chat Messages -->
-            <div class="flex-1 overflow-y-auto p-4 space-y-4" x-ref="chatMessages">
-                <template x-for="message in chatMessages" :key="message.id">
-                    <div class="max-w-xs p-3 rounded-lg"
-                         :class="message.is_own ? 'bg-blue-100 ml-auto' : 'bg-gray-100'">
-                        <div class="font-semibold text-sm" x-text="message.username"></div>
-                        <div class="text-sm" x-text="message.content"></div>
-                        <div class="text-xs text-gray-500 mt-1" x-text="message.timestamp"></div>
-                    </div>
-                </template>
-
-                <div x-show="chatMessages.length === 0" class="text-center text-gray-500 py-8">
-                    Aucun message pour le moment. Soyez le premier à écrire !
-                </div>
-            </div>
-
-            <!-- Chat Input -->
-            <div class="border-t p-4">
-                <div class="flex space-x-2">
-                    <input 
-                        x-model="newMessage" 
-                        @keydown.enter="sendMessage()" 
-                        type="text" 
-                        placeholder="Votre message..." 
-                        maxlength="500"
-                        class="flex-1 px-3 py-2 border rounded-full focus:ring-2 focus:ring-blue-500"
-                    >
-                    <button @click="sendMessage()" 
-                            class="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700">
-                        📤
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    {% include 'components/order_v2/chat_floating.html' %}
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    console.log('Order V2 page loaded');
-    console.log('Current User ID:', window.currentUserId);
-    console.log('Is Admin:', window.isAdmin);
-</script>
 {% endblock %}
