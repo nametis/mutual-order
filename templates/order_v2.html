@@ -13,11 +13,11 @@
 {% block content %}
 <script src="{{ url_for('static', filename='js/orderApp.js') }}"></script>
 
-<div x-data="orderApp()" x-init="init()" class="min-h-screen relative">
-    <div x-show="!loading" x-cloak>
+<div x-data="orderApp()" x-init="init()" class="min-h-screen">
+    <div x-show="!loading" class="max-w-7xl mx-auto px-4 py-6">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             <!-- Left/Main Column -->
-            <div class="lg:col-span-2">
+            <div class="lg:col-span-2 space-y-6">
                 {% include 'components/order_v2/info_section.html' %}
                 {% include 'components/order_v2/add_listing_section.html' %} 
                 {% include 'components/order_v2/validation_section.html' %}
