@@ -342,7 +342,35 @@ function orderApp() {
             // Show chat on step 2 (validation) or after step 3 (ordered/delivered/closed)
             const stepIndex = this.statusSteps.findIndex(s => s.key === this.order.status);
             return stepIndex === 1 || stepIndex >= 3;
-        }
+        },
 
+        // Add this to your existing static/js/orderApp.js file:
+        isParticipantValidated(participantId) {
+            return this.validations.some(v => v.user_id === participantId && v.validated);
+        },
+
+        async validateUserParticipation() {
+            if (!this.validationAgreement) return;
+
+            try {
+                const response = await fetch(`/api/orders/${this.getOrderId()}/validate`, {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    this.userValidated = true;
+                    this.flashMessage = 'Participation validée avec succès';
+                    await this.loadValidations();
+                    await this.loadOrder();
+                    setTimeout(() => this.flashMessage = '', 3000);
+                } else {
+                    alert(result.error || 'Erreur lors de la validation');
+                }
+            } catch (error) {
+                console.error('Error validating participation:', error);
+                alert('Erreur lors de la validation');
+            }
+        },
     };
 }
