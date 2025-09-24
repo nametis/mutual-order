@@ -1,19 +1,4 @@
-function dashboardApp() {
-    return {
-        loading: true,
-        orders: [],
-        filter: 'all',
-        
-        get currentOrders() {
-            return this.orders.filter(order => 
-                ['building', 'validation', 'ordered', 'delivered'].includes(order.status) &&
-                (order.is_creator || order.is_participant)
-            );
-        },
-        
-        get openOrders() {
-            return this.orders.filter(order => 
-                ['building', 'validation'].includes(order{% extends "base.html" %}
+{% extends "base.html" %}
 
 {% block title %}Dashboard{% endblock %}
 
