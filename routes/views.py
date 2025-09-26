@@ -260,7 +260,21 @@ def clear_cache():
     
     return redirect(url_for('views.index'))
 
-@views_bp.route('/settings')
+@views_bp.route('/profile')
+@login_required
+def profile():
+    """User profile page"""
+    user = auth_service.get_current_user()
+    from models import Order, Listing
+    user_stats = {
+        'orders_created': Order.query.filter_by(creator_id=user.id).count(),
+        'orders_participated': Order.query.join(Listing).filter(Listing.user_id == user.id).distinct().count(),
+        'total_listings': Listing.query.filter_by(user_id=user.id).count(),
+        'active_listings': Listing.query.filter_by(user_id=user.id, status='For Sale').count()
+    }
+    return render_template('profile.html', user=user, stats=user_stats)
+
+@views_bp.route('/settings')  
 @login_required
 def settings():
     """User settings page"""
