@@ -1,22 +1,30 @@
-<!-- My Discs Section -->
+<!-- My Discs Section with Pagination -->
 <div x-show="myListings.length > 0" class="bg-white rounded-lg shadow p-4 sm:p-6 mt-6">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <h3 class="flex items-center space-x-2 text-lg sm:text-xl font-bold text-gray-900">
             <span class="bg-yellow-100 px-3 py-1 rounded-full">
                 <span>💿</span>
                 <span>Mes disques</span>
+                <span class="ml-1" x-text="'(' + myListings.length + ')'"></span>
             </span>
         </h3>
-        <button x-show="order.status === 'building'" @click="verifyAvailability()"
-                class="flex items-center space-x-1 px-3 py-1 border border-dashed border-gray-400 rounded-full text-gray-600 hover:bg-gray-50 text-xs transition-colors self-start">
-            <span>🔄</span>
-            <span>Vérifier dispo</span>
-        </button>
+        <div class="flex space-x-2">
+            <button x-show="myListings.length > 6" @click="showAllMyListings = !showAllMyListings"
+                    class="flex items-center space-x-1 px-3 py-1 border border-gray-300 rounded-full text-gray-600 hover:bg-gray-50 text-xs transition-colors">
+                <span x-show="!showAllMyListings">👁️ Voir tous</span>
+                <span x-show="showAllMyListings">👁️ Réduire</span>
+            </button>
+            <button x-show="order.status === 'building'" @click="verifyAvailability()"
+                    class="flex items-center space-x-1 px-3 py-1 border border-dashed border-gray-400 rounded-full text-gray-600 hover:bg-gray-50 text-xs transition-colors">
+                <span>🔄</span>
+                <span>Vérifier dispo</span>
+            </button>
+        </div>
     </div>
     
     <!-- Mobile: Card Layout -->
     <div class="block sm:hidden space-y-3">
-        <template x-for="listing in myListings" :key="listing.id + '_mobile'">
+        <template x-for="(listing, index) in (showAllMyListings ? myListings : myListings.slice(0, 6))" :key="listing.id + '_mobile'">
             <div class="border border-gray-200 rounded-lg p-4">
                 <div class="flex items-start space-x-3">
                     <!-- Image -->
@@ -66,7 +74,7 @@
         </template>
     </div>
     
-    <!-- Desktop: Simplified Table -->
+    <!-- Desktop: Table -->
     <div class="hidden sm:block">
         <div class="bg-white rounded-lg shadow overflow-hidden">
             <table class="min-w-full">
@@ -80,7 +88,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
-                    <template x-for="listing in myListings" :key="listing.id + '_desktop'">
+                    <template x-for="(listing, index) in (showAllMyListings ? myListings : myListings.slice(0, 6))" :key="listing.id + '_desktop'">
                         <tr>
                             <td class="px-6 py-4">
                                 <img x-show="listing.image_url" :src="listing.image_url" 
@@ -130,22 +138,35 @@
             </table>
         </div>
     </div>
+    
+    <!-- Show more indicator -->
+    <div x-show="!showAllMyListings && myListings.length > 6" class="text-center mt-4">
+        <p class="text-sm text-gray-500" x-text="'... et ' + (myListings.length - 6) + ' autre' + (myListings.length - 6 > 1 ? 's' : '') + ' disque' + (myListings.length - 6 > 1 ? 's' : '')"></p>
+    </div>
 </div>
 
-<!-- Other Discs Section -->
+<!-- Other Discs Section with Pagination -->
 <div x-show="otherListings.length > 0" class="bg-white rounded-lg shadow p-4 sm:p-6 mt-6">
-    <div class="flex items-center justify-between mb-4">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <h3 class="flex items-center space-x-2 text-lg sm:text-xl font-bold text-gray-900">
             <span class="bg-yellow-100 px-3 py-1 rounded-full">
                 <span>🎵</span>
-                <span>Les autres disques dans la commande</span>
+                <span>Les autres disques</span>
+                <span class="ml-1" x-text="'(' + otherListings.length + ')'"></span>
             </span>
         </h3>
+        <div x-show="otherListings.length > 6">
+            <button @click="showAllOtherListings = !showAllOtherListings"
+                    class="flex items-center space-x-1 px-3 py-1 border border-gray-300 rounded-full text-gray-600 hover:bg-gray-50 text-xs transition-colors">
+                <span x-show="!showAllOtherListings">👁️ Voir tous</span>
+                <span x-show="showAllOtherListings">👁️ Réduire</span>
+            </button>
+        </div>
     </div>
     
     <!-- Mobile: Card Layout -->
     <div class="block sm:hidden space-y-3">
-        <template x-for="listing in otherListings" :key="listing.id + '_mobile'">
+        <template x-for="(listing, index) in (showAllOtherListings ? otherListings : otherListings.slice(0, 6))" :key="listing.id + '_mobile_other'">
             <div class="border border-gray-200 rounded-lg p-4">
                 <div class="flex items-start space-x-3">
                     <!-- Image -->
@@ -197,7 +218,7 @@
         </template>
     </div>
     
-    <!-- Desktop: Simplified Table -->
+    <!-- Desktop: Table -->
     <div class="hidden sm:block">
         <div class="bg-white rounded-lg shadow overflow-hidden">
             <table class="min-w-full">
@@ -212,7 +233,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
-                    <template x-for="listing in otherListings" :key="listing.id + '_desktop'">
+                    <template x-for="(listing, index) in (showAllOtherListings ? otherListings : otherListings.slice(0, 6))" :key="listing.id + '_desktop_other'">
                         <tr>
                             <td class="px-6 py-4">
                                 <img x-show="listing.image_url" :src="listing.image_url" 
@@ -263,5 +284,10 @@
                 </tbody>
             </table>
         </div>
+    </div>
+    
+    <!-- Show more indicator -->
+    <div x-show="!showAllOtherListings && otherListings.length > 6" class="text-center mt-4">
+        <p class="text-sm text-gray-500" x-text="'... et ' + (otherListings.length - 6) + ' autre' + (otherListings.length - 6 > 1 ? 's' : '') + ' disque' + (otherListings.length - 6 > 1 ? 's' : '')"></p>
     </div>
 </div>

@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}Paramètres - MUTUAL ORDER{% endblock %}
+
+{% block head %}
+<script>
+    window.currentUser = {{ current_user | tojson | safe }};
+</script>
+{% endblock %}
+
+{% block content %}
+<div x-data="settingsApp()" x-init="init()" class="min-h-screen bg-gray-50">
+    <div class="max-w-4xl mx-auto px-4 py-6">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Paramètres</h1>
+            <p class="text-gray-600">Gérez vos préférences et informations personnelles</p>
+        </div>
+
+        <!-- Flash Messages -->
+        <div x-show="flashMessage" x-cloak class="mb-6 p-4 rounded-lg border"
+             :class="flashType === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700'">
+            <p class="text-sm" x-text="flashMessage"></p>
+        </div>
+
+        <!-- Settings Tabs -->
+        <div class="bg-white rounded-lg shadow">
+            <!-- Tab Headers -->
+            <div class="border-b border-gray-200">
+                <nav class="flex space-x-8 px-6 py-4">
+                    <button @click="activeTab = 'profile'" 
+                            :class="activeTab === 'profile' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                            class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                        👤 Mon profil
+                    </button>
+                    <button @click="activeTab = 'friends'" 
+                            :class="activeTab === 'friends' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                            class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                        👥 Amis
+                    </button>
+                    <button @click="activeTab = 'sellers'" 
+                            :class="activeTab === 'sellers' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                            class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                        🛍️ Vendeurs favoris
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="p-6">
+                <!-- Profile Tab -->
+                <div x-show="activeTab === 'profile'" class="space-y-6">
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Informations personnelles</h3>
+                        <form @submit.prevent="updateProfile()" class="space-y-4">
+                            <!-- Username -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Nom d'utilisateur Mutual Order
+                                </label>
+                                <div class="flex space-x-2">
+                                    <input type="text" x-model="profile.mutual_order_username" 
+                                           @input="checkUsernameAvailability()"
+                                           required minlength="2" maxlength="30"
+                                           class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    <div x-show="checking" class="flex items-center text-sm text-gray-500">
+                                        <span>Vérification...</span>
+                                    </div>
+                                    <div x-show="!checking && feedback.message" 
+                                         class="flex items-center text-sm"
+                                         :class="feedback.available ? 'text-green-600' : 'text-red-600'">
+                                        <span x-text="feedback.message"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Base City -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Ville par défaut
+                                </label>
+                                <input type="text" x-model="profile.default_location" 
+                                       placeholder="Ex: Paris, Lyon, Marseille..."
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <p class="mt-1 text-sm text-gray-500">Cette ville sera utilisée par défaut lors de la création de commandes</p>
+                            </div>
+
+                            <!-- PayPal Me Link -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Lien PayPal.me
+                                </label>
+                                <input type="url" x-model="profile.default_paypal_link" 
+                                       placeholder="https://paypal.me/votrenom"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <p class="mt-1 text-sm text-gray-500">Votre lien PayPal.me par défaut pour recevoir les paiements</p>
+                            </div>
+
+                            <!-- Discogs Info (Read-only) -->
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h4 class="font-medium text-gray-900 mb-2">Compte Discogs lié</h4>
+                                <div class="text-sm text-gray-600">
+                                    <p><strong>Nom d'utilisateur:</strong> <span x-text="profile.discogs_username"></span></p>
+                                    <p><strong>Compte créé le:</strong> <span x-text="formatDate(profile.created_at)"></span></p>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end">
+                                <button type="submit" :disabled="!canSave"
+                                        :class="canSave ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed'"
+                                        class="px-6 py-2 text-white rounded-lg transition-colors">
+                                    Sauvegarder
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Friends Tab -->
+                <div x-show="activeTab === 'friends'" class="space-y-6">
+                    <div class="text-center py-12">
+                        <div class="text-6xl mb-4">👥</div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Fonctionnalité à venir</h3>
+                        <p class="text-gray-600">Le système d'amis sera bientôt disponible !</p>
+                        <p class="text-sm text-gray-500 mt-2">
+                            Vous pourrez ajouter d'autres utilisateurs comme amis et voir leurs commandes plus facilement.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Favorite Sellers Tab -->
+                <div x-show="activeTab === 'sellers'" class="space-y-6">
+                    <div class="text-center py-12">
+                        <div class="text-6xl mb-4">🛍️</div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Fonctionnalité à venir</h3>
+                        <p class="text-gray-600">La liste des vendeurs favoris sera bientôt disponible !</p>
+                        <p class="text-sm text-gray-500 mt-2">
+                            Vous pourrez marquer vos vendeurs préférés et recevoir des notifications pour leurs nouvelles commandes.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function settingsApp() {
+    return {
+        activeTab: 'profile',
+        flashMessage: '',
+        flashType: '',
+        checking: false,
+        feedback: { available: false, message: '' },
+        profile: {
+            id: null,
+            mutual_order_username: '',
+            discogs_username: '',
+            default_location: '',
+            default_paypal_link: '',
+            created_at: null
+        },
+
+        init() {
+            // Load user data from window
+            if (window.currentUser) {
+                this.profile = {
+                    id: window.currentUser.id,
+                    mutual_order_username: window.currentUser.username || '',
+                    discogs_username: window.currentUser.discogs_username || '',
+                    default_location: window.currentUser.default_location || '',
+                    default_paypal_link: window.currentUser.default_paypal_link || '',
+                    created_at: window.currentUser.created_at
+                };
+            }
+        },
+
+        get canSave() {
+            return this.profile.mutual_order_username.length >= 2 && 
+                   this.feedback.available && 
+                   !this.checking;
+        },
+
+        async checkUsernameAvailability() {
+            if (this.profile.mutual_order_username.length < 2) {
+                this.feedback = { available: false, message: '' };
+                return;
+            }
+
+            // If username hasn't changed, it's available
+            if (this.profile.mutual_order_username === window.currentUser.username) {
+                this.feedback = { available: true, message: 'Nom actuel' };
+                return;
+            }
+
+            this.checking = true;
+
+            try {
+                const response = await fetch('/api/check_username', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username: this.profile.mutual_order_username })
+                });
+
+                const result = await response.json();
+                this.feedback = result;
+            } catch (error) {
+                this.feedback = { available: false, message: 'Erreur de vérification' };
+            } finally {
+                this.checking = false;
+            }
+        },
+
+        async updateProfile() {
+            if (!this.canSave) return;
+
+            try {
+                const response = await fetch('/api/user/profile', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        mutual_order_username: this.profile.mutual_order_username,
+                        default_location: this.profile.default_location,
+                        default_paypal_link: this.profile.default_paypal_link
+                    })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    this.flashMessage = 'Profil mis à jour avec succès !';
+                    this.flashType = 'success';
+                    
+                    // Update window.currentUser for other parts of the app
+                    window.currentUser.username = this.profile.mutual_order_username;
+                    
+                    setTimeout(() => {
+                        this.flashMessage = '';
+                    }, 3000);
+                } else {
+                    this.flashMessage = result.error || 'Erreur lors de la mise à jour';
+                    this.flashType = 'error';
+                    setTimeout(() => {
+                        this.flashMessage = '';
+                    }, 5000);
+                }
+            } catch (error) {
+                this.flashMessage = 'Erreur de connexion';
+                this.flashType = 'error';
+                setTimeout(() => {
+                    this.flashMessage = '';
+                }, 5000);
+            }
+        },
+
+        formatDate(dateString) {
+            if (!dateString) return '';
+            return new Date(dateString).toLocaleDateString('fr-FR', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+    };
+}
+</script>
+{% endblock %}

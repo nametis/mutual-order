@@ -1,0 +1,124 @@
+<!-- Participant Summary Toggle Component -->
+<div class="bg-white rounded-lg shadow mt-6">
+    <!-- Toggle Header -->
+    <div class="p-4 border-b border-gray-200 cursor-pointer" @click="showParticipantSummary = !showParticipantSummary">
+        <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                <span>📊</span>
+                <span>Récapitulatif par participant</span>
+            </h3>
+            <div class="flex items-center space-x-2">
+                <span class="text-sm text-gray-600" x-text="'Total: ' + order.total_with_discount.toFixed(2) + '€'"></span>
+                <svg class="w-5 h-5 text-gray-500 transform transition-transform" 
+                     :class="{ 'rotate-180': showParticipantSummary }">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M19 9l-7 7-7-7"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expandable Content -->
+    <div x-show="showParticipantSummary" x-collapse class="p-4">
+        <!-- Mobile: Card Layout -->
+        <div class="block sm:hidden space-y-4">
+            <template x-for="participant in participantSummaryData" :key="participant.user.id + '_mobile_summary'">
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-semibold text-gray-900" x-text="participant.user.username"></span>
+                            <span x-show="participant.user.is_creator" class="text-yellow-500">👑</span>
+                        </div>
+                        <span class="text-lg font-bold text-gray-900" 
+                              x-text="participant.summary.total.toFixed(2) + '€'"></span>
+                    </div>
+                    
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Disques:</span>
+                            <span x-text="participant.summary.listings_count"></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Sous-total:</span>
+                            <span x-text="participant.summary.subtotal.toFixed(2) + '€'"></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Part frais & taxes:</span>
+                            <span x-text="participant.summary.fees_share.toFixed(2) + '€'"></span>
+                        </div>
+                        <div x-show="participant.summary.discount_share > 0" class="flex justify-between">
+                            <span class="text-gray-600">Part discount:</span>
+                            <span class="text-green-600" x-text="'-' + participant.summary.discount_share.toFixed(2) + '€'"></span>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- Desktop: Table Layout -->
+        <div class="hidden sm:block overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Participant
+                        </th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Nb disques
+                        </th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Sous-total
+                        </th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Frais & Taxes
+                        </th>
+                        <th x-show="order.discount && order.discount > 0" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Discount
+                        </th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Total
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <template x-for="participant in participantSummaryData" :key="participant.user.id + '_desktop_summary'">
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-sm font-medium text-gray-900" x-text="participant.user.username"></span>
+                                    <span x-show="participant.user.is_creator" class="text-yellow-500">👑</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900" 
+                                x-text="participant.summary.listings_count"></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900" 
+                                x-text="participant.summary.subtotal.toFixed(2) + '€'"></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900" 
+                                x-text="participant.summary.fees_share.toFixed(2) + '€'"></td>
+                            <td x-show="order.discount && order.discount > 0" class="px-6 py-4 whitespace-nowrap text-right text-sm text-green-600" 
+                                x-text="'-' + participant.summary.discount_share.toFixed(2) + '€'"></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-gray-900" 
+                                x-text="participant.summary.total.toFixed(2) + '€'"></td>
+                        </tr>
+                    </template>
+                </tbody>
+                <!-- Total Row -->
+                <tfoot class="bg-gray-50">
+                    <tr>
+                        <td class="px-6 py-3 text-sm font-bold text-gray-900">TOTAL</td>
+                        <td class="px-6 py-3 text-right text-sm font-bold text-gray-900" 
+                            x-text="order.available_count"></td>
+                        <td class="px-6 py-3 text-right text-sm font-bold text-gray-900" 
+                            x-text="order.total_price.toFixed(2) + '€'"></td>
+                        <td class="px-6 py-3 text-right text-sm font-bold text-gray-900" 
+                            x-text="(order.shipping_cost + order.taxes).toFixed(2) + '€'"></td>
+                        <td x-show="order.discount && order.discount > 0" class="px-6 py-3 text-right text-sm font-bold text-green-600" 
+                            x-text="'-' + order.discount.toFixed(2) + '€'"></td>
+                        <td class="px-6 py-3 text-right text-sm font-bold text-gray-900" 
+                            x-text="order.total_with_discount.toFixed(2) + '€'"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>

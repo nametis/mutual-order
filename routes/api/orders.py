@@ -274,3 +274,31 @@ def get_user_summary(order_id):
     summary = order.get_user_summary(current_user.id)
     
     return jsonify(summary)
+
+@orders_api.route('/orders/<int:order_id>/participant-summary', methods=['GET'])
+def get_participant_summary(order_id):
+    """Get participant summary for an order"""
+    if not auth_service.is_authenticated():
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    order = Order.query.get_or_404(order_id)
+    current_user = auth_service.get_current_user()
+    
+    # Check if user has access to this order
+    user_listing_count = order.listings.filter_by(user_id=current_user.id).count()
+    if user_listing_count == 0 and order.creator_id != current_user.id and not current_user.is_admin:
+        return jsonify({'error': 'Access denied to this order'}), 403
+    
+    try:
+        # Get all participants summary
+        participants_summary = order.get_all_participants_summary()
+        
+        # Convert to list format for frontend
+        summary_list = []
+        for participant_id, data in participants_summary.items():
+            summary_list.append(data)
+        
+        return jsonify(summary_list)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

@@ -11,6 +11,10 @@ class User(db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
+    # New profile fields for settings
+    default_location = db.Column(db.String(200), nullable=True)
+    default_paypal_link = db.Column(db.Text, nullable=True)
+    
     # Relationships
     created_orders = db.relationship('Order', backref='creator', lazy='dynamic')
     user_listings = db.relationship('Listing', backref='user', lazy='dynamic')
@@ -33,5 +37,7 @@ class User(db.Model):
             'discogs_username': self.discogs_username,
             'is_admin': self.is_admin,
             'profile_completed': self.profile_completed,
-            'created_at': self.created_at.isoformat()
+            'created_at': self.created_at.isoformat(),
+            'default_location': self.default_location,
+            'default_paypal_link': self.default_paypal_link
         }

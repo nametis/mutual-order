@@ -259,3 +259,10 @@ def clear_cache():
         flash('Pas de cache Redis disponible', 'info')
     
     return redirect(url_for('views.index'))
+
+@views_bp.route('/settings')
+@login_required
+def settings():
+    """User settings page"""
+    user = auth_service.get_current_user()
+    return render_template('settings.html', current_user=user)

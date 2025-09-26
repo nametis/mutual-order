@@ -22,6 +22,10 @@
                            class="text-gray-700 hover:text-blue-600 transition-colors">
                             ➕ Nouvelle commande
                         </a>
+                        <a href="{{ url_for('views.settings') }}" 
+                           class="text-gray-700 hover:text-blue-600 transition-colors">
+                            ⚙️ Paramètres
+                        </a>
                     </nav>
                 {% endif %}
             </div>
@@ -48,6 +52,10 @@
                             <a href="{{ url_for('views.create_order_form') }}" 
                             class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
                                 ➕ Nouvelle commande
+                            </a>
+                            <a href="{{ url_for('views.settings') }}" 
+                            class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                                ⚙️ Paramètres
                             </a>
                             <hr class="my-2">
                             <a href="{{ url_for('auth.logout') }}" 

@@ -36,6 +36,18 @@ def update_user_profile():
             if not user.profile_completed:
                 user.profile_completed = True
         
+        # Update default location if provided
+        if 'default_location' in data:
+            user.default_location = data['default_location'].strip() if data['default_location'] else None
+        
+        # Update default PayPal link if provided
+        if 'default_paypal_link' in data:
+            paypal_link = data['default_paypal_link'].strip() if data['default_paypal_link'] else None
+            # Basic validation for PayPal.me links
+            if paypal_link and not paypal_link.startswith(('https://paypal.me/', 'https://www.paypal.me/')):
+                return jsonify({'error': 'Le lien PayPal.me doit commencer par https://paypal.me/'}), 400
+            user.default_paypal_link = paypal_link
+        
         db.session.commit()
         return jsonify({
             'success': True,
