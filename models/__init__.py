@@ -11,5 +11,6 @@ from .chat import OrderChat, ChatReadStatus
 from .favorite_seller import FavoriteSeller
 from .friend import Friend
 from .friend_request import FriendRequest
+from .wantlist import WantlistItem, WantlistReference
 
-__all__ = ['db', 'User', 'Order', 'UserValidation', 'Listing', 'OrderChat', 'ChatReadStatus', 'FavoriteSeller', 'Friend', 'FriendRequest']
+__all__ = ['db', 'User', 'Order', 'UserValidation', 'Listing', 'OrderChat', 'ChatReadStatus', 'FavoriteSeller', 'Friend', 'FriendRequest', 'WantlistItem', 'WantlistReference']
