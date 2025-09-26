@@ -77,19 +77,9 @@
             <span class="text-xs font-medium text-gray-700">Créateur</span>
         </div>
 
-        <!-- Location - EDITABLE -->
-        <div class="relative p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
-            <!-- Edit pen icon -->
-            <button x-show="order.creator_id === currentUserId || isAdmin" 
-                    @click="editField = 'location'"
-                    class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-                ✏️
-            </button>
-            <div class="flex items-center space-x-1 mb-1">
-                <span class="text-sm">🏠</span>
-                <span class="text-xs font-bold text-gray-900" x-text="order.user_location || 'N/A'"></span>
-            </div>
-            <span class="text-xs font-medium text-gray-700">Localisation</span>
+        <!-- BLANK SPACE -->
+        <div class="p-3 rounded min-h-[70px]">
+            <!-- Intentionally blank -->
         </div>
 
         <!-- Payment rule - EDITABLE -->
@@ -104,6 +94,62 @@
                 <span class="text-xs font-medium text-gray-900">💳 Paiement</span>
             </div>
             <span class="text-sm font-bold text-gray-700" x-text="order.payment_timing"></span>
+        </div>      
+        
+        <!-- Shipping & Taxes - spans 3 columns on desktop, full width on mobile/tablet -->
+        <div class="relative col-span-2 md:col-span-4 xl:col-span-3 p-2 sm:p-3 bg-gray-100 rounded flex flex-col sm:flex-row items-center justify-between min-h-[60px] sm:min-h-[70px]">
+            <!-- Edit pen icon -->
+            <button x-show="order.creator_id === currentUserId || isAdmin" 
+                    @click="editField = 'fees'"
+                    class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                ✏️
+            </button>
+            <div class="flex items-center space-x-1 mb-2 sm:mb-0">
+                <span class="text-sm">📦</span>
+                <span class="text-sm font-medium text-gray-700">Frais de port + Taxes :</span>
+            </div>
+            <div class="text-center sm:text-right">
+                <div class="text-lg font-bold text-gray-900" x-text="(order.shipping_cost + order.taxes).toFixed(2) + '€'"></div>
+                <div class="text-xs text-gray-500" 
+                     x-text="order.available_count > 0 ? '(' + ((order.shipping_cost + order.taxes) / order.available_count).toFixed(2) + '€/disque)' : ''"></div>
+            </div>
+        </div>
+
+        <!-- Discount - EDITABLE -->
+        <div class="relative p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
+            <!-- Edit pen icon -->
+            <button x-show="order.creator_id === currentUserId || isAdmin" 
+                    @click="editField = 'discount'"
+                    class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                ✏️
+            </button>
+            <div class="flex items-center space-x-1 mb-1">
+                <span class="text-sm">💸</span>
+                <span class="text-lg font-bold" 
+                      :class="order.discount && order.discount > 0 ? 'text-green-600' : 'text-gray-400'"
+                      x-text="order.discount && order.discount > 0 ? order.discount.toFixed(2) + '€' : '0€'"></span>
+            </div>
+            <span class="text-xs font-medium text-gray-700">Discount</span>
+        </div>
+
+        <!-- BLANK SPACE -->
+        <div class="p-3 rounded min-h-[70px]">
+            <!-- Intentionally blank -->
+        </div>
+
+        <!-- Location - EDITABLE -->
+        <div class="relative p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
+            <!-- Edit pen icon -->
+            <button x-show="order.creator_id === currentUserId || isAdmin" 
+                    @click="editField = 'location'"
+                    class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                ✏️
+            </button>
+            <div class="flex items-center space-x-1 mb-1">
+                <span class="text-sm">🏠</span>
+                <span class="text-xs font-bold text-gray-900" x-text="order.user_location || 'N/A'"></span>
+            </div>
+            <span class="text-xs font-medium text-gray-700">Localisation</span>
         </div>
 
         <!-- PayPal Me link - EDITABLE -->
@@ -124,41 +170,6 @@
             </div>
             <span class="text-xs font-medium text-gray-700">PayPal Me</span>
         </div>
-        
-        <!-- Discount - EDITABLE -->
-        <div class="relative p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
-            <!-- Edit pen icon -->
-            <button x-show="order.creator_id === currentUserId || isAdmin" 
-                    @click="editField = 'discount'"
-                    class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-                ✏️
-            </button>
-            <div class="flex items-center space-x-1 mb-1">
-                <span class="text-sm">💸</span>
-                <span class="text-lg font-bold" 
-                      :class="order.discount && order.discount > 0 ? 'text-green-600' : 'text-gray-400'"
-                      x-text="order.discount && order.discount > 0 ? order.discount.toFixed(2) + '€' : '0€'"></span>
-            </div>
-            <span class="text-xs font-medium text-gray-700">Discount</span>
-        </div>
-        
-        <!-- Shipping & Taxes - spans 3 columns on desktop, full width on mobile/tablet -->
-        <div class="relative col-span-2 md:col-span-4 xl:col-span-3 p-2 sm:p-3 bg-gray-100 rounded flex flex-col sm:flex-row items-center justify-between min-h-[60px] sm:min-h-[70px]">
-            <!-- Edit pen icon -->
-            <button x-show="order.creator_id === currentUserId || isAdmin" 
-                    @click="editField = 'fees'"
-                    class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-                ✏️
-            </button>
-            <div class="flex items-center space-x-1 mb-2 sm:mb-0">
-                <span class="text-sm">📦</span>
-                <span class="text-sm font-medium text-gray-700">Frais de port + Taxes :</span>
-            </div>
-            <div class="text-center sm:text-right">
-                <div class="text-lg font-bold text-gray-900" x-text="(order.shipping_cost + order.taxes).toFixed(2) + '€'"></div>
-                <div class="text-xs text-gray-500" 
-                     x-text="order.available_count > 0 ? '(' + ((order.shipping_cost + order.taxes) / order.available_count).toFixed(2) + '€/disque)' : ''"></div>
-            </div>
-        </div>
+
     </div>
 </div>
