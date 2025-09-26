@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Profil - MUTUAL ORDER{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Mon Profil</h1>
+        <p class="text-gray-600">Informations de votre compte et statistiques d'utilisation</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- User Info Card -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="text-center mb-6">
+                    <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-3xl">👤</span>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-900">{{ user.username }}</h2>
+                    <p class="text-gray-600">{{ user.discogs_username }}</p>
+                    {% if user.is_admin %}
+                        <span class="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium mt-2">
+                            👑 Administrateur
+                        </span>
+                    {% endif %}
+                </div>
+
+                <div class="space-y-3 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Membre depuis:</span>
+                        <span class="font-medium">{{ user.created_at.strftime('%d/%m/%Y') }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Localisation:</span>
+                        <span class="font-medium">{{ user.default_location or 'Non définie' }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">PayPal:</span>
+                        <span class="font-medium">
+                            {% if user.default_paypal_link %}
+                                <a href="{{ user.default_paypal_link }}" target="_blank" class="text-blue-600 hover:text-blue-800">Configuré</a>
+                            {% else %}
+                                Non défini
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <a href="{{ url_for('views.settings') }}" 
+                       class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2">
+                        <span>⚙️</span>
+                        <span>Modifier le profil</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="lg:col-span-2">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <!-- Orders Created -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-yellow-100">
+                            <span class="text-2xl">👑</span>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Commandes créées</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ stats.orders_created }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Orders Participated -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-blue-100">
+                            <span class="text-2xl">👥</span>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Commandes rejointes</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ stats.orders_participated }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Total Listings -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-green-100">
+                            <span class="text-2xl">💿</span>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Total disques ajoutés</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ stats.total_listings }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Listings -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-purple-100">
+                            <span class="text-2xl">🎵</span>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Disques en cours</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ stats.active_listings }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="mt-6 bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Actions rapides</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <a href="{{ url_for('views.create_order_form') }}" 
+                       class="flex items-center justify-center space-x-2 py-3 px-4 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors">
+                        <span>➕</span>
+                        <span>Créer une nouvelle commande</span>
+                    </a>
+                    <a href="{{ url_for('views.settings') }}" 
+                       class="flex items-center justify-center space-x-2 py-3 px-4 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
+                        <span>⚙️</span>
+                        <span>Paramètres du compte</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

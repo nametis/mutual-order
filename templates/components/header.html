@@ -7,10 +7,9 @@
                 <a href="{{ url_for('views.index') }}" class="text-xl font-bold text-blue-600 hover:text-blue-800 transition-colors">
                     MUTUAL ORDER 0.5
                 </a>
-                    <span class="text-gray-500">|</span>
-                    <span class="text-gray-700">{{ current_user.username }}</span>
+                <span class="text-gray-500">|</span>
+                <span class="text-gray-700">{{ current_user.username }}</span>
 
-                
                 {% if current_user and current_user.is_authenticated %}
                     <span class="hidden sm:inline text-gray-500">|</span>
                     <nav class="hidden sm:flex items-center space-x-4 text-sm">
@@ -21,6 +20,10 @@
                         <a href="{{ url_for('views.create_order_form') }}" 
                            class="text-gray-700 hover:text-blue-600 transition-colors">
                             ➕ Nouvelle commande
+                        </a>
+                        <a href="{{ url_for('views.profile') }}" 
+                           class="text-gray-700 hover:text-blue-600 transition-colors">
+                            👤 Profil
                         </a>
                         <a href="{{ url_for('views.settings') }}" 
                            class="text-gray-700 hover:text-blue-600 transition-colors">
@@ -52,6 +55,10 @@
                             <a href="{{ url_for('views.create_order_form') }}" 
                             class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
                                 ➕ Nouvelle commande
+                            </a>
+                            <a href="{{ url_for('views.profile') }}" 
+                            class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                                👤 Profil
                             </a>
                             <a href="{{ url_for('views.settings') }}" 
                             class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
