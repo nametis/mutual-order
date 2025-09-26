@@ -20,6 +20,7 @@ class OrderChat(db.Model):
         return {
             'id': self.id,
             'username': self.user.username,
+            'mutual_order_username': self.user.mutual_order_username,
             'content': self.message,
             'timestamp': timestamp,
             'is_own': self.user_id == current_user_id if current_user_id else False,

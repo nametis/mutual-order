@@ -90,11 +90,6 @@ def update_order_settings(order_id):
         data = request.get_json()
         
         # Update order settings
-        if 'direct_url' in data:
-            order.direct_url = data['direct_url'].strip() if data['direct_url'] else None
-        
-        if 'max_amount' in data:
-            order.max_amount = float(data['max_amount']) if data['max_amount'] else None
         
         if 'deadline' in data:
             if data['deadline']:
@@ -124,6 +119,12 @@ def update_order_settings(order_id):
         
         if 'seller_shop_url' in data:
             order.seller_shop_url = data['seller_shop_url'].strip() if data['seller_shop_url'] else None
+        
+        if 'paypal_link' in data:
+            order.paypal_link = data['paypal_link'].strip() if data['paypal_link'] else None
+        
+        if 'user_location' in data:
+            order.user_location = data['user_location'].strip() if data['user_location'] else None
         
         db.session.commit()
         return jsonify({'success': True, 'message': 'Paramètres mis à jour avec succès'})

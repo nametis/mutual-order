@@ -20,6 +20,11 @@ class User(db.Model):
     user_listings = db.relationship('Listing', backref='user', lazy='dynamic')
     validations = db.relationship('UserValidation', backref='user', lazy='dynamic')
     chat_messages = db.relationship('OrderChat', backref='user', lazy='dynamic')
+    favorite_sellers = db.relationship('FavoriteSeller', back_populates='user', lazy='dynamic')
+    friends = db.relationship('Friend', foreign_keys='Friend.user_id', back_populates='user', lazy='dynamic')
+    friend_of = db.relationship('Friend', foreign_keys='Friend.friend_user_id', back_populates='friend_user', lazy='dynamic')
+    sent_friend_requests = db.relationship('FriendRequest', foreign_keys='FriendRequest.requester_id', back_populates='requester', lazy='dynamic')
+    received_friend_requests = db.relationship('FriendRequest', foreign_keys='FriendRequest.requested_id', back_populates='requested', lazy='dynamic')
     
     # Propriété pour compatibilité avec le code existant
     @property
@@ -29,11 +34,27 @@ class User(db.Model):
     def __repr__(self):
         return f'<User {self.username}>'
     
+    # Flask-Login compatibility
+    @property
+    def is_authenticated(self):
+        return True
+    
+    @property
+    def is_active(self):
+        return True
+    
+    @property
+    def is_anonymous(self):
+        return False
+    
+    def get_id(self):
+        return str(self.id)
+    
     def to_dict(self):
         """Convert user to dictionary for API responses"""
         return {
             'id': self.id,
-            'username': self.username,
+            'username': '@' + self.username if self.mutual_order_username else self.discogs_username,
             'discogs_username': self.discogs_username,
             'is_admin': self.is_admin,
             'profile_completed': self.profile_completed,

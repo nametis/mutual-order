@@ -38,8 +38,6 @@ def create_order_form():
     """Create new order form"""
     if request.method == 'POST':
         first_listing_url = request.form.get('first_listing_url', '').strip()
-        max_amount = request.form.get('max_amount', type=float)
-        max_amount = float(max_amount) if max_amount and max_amount.strip() else None
         deadline_str = request.form.get('deadline', '').strip()
         payment_timing = request.form.get('payment_timing', 'avant la commande')
         seller_shop_url = request.form.get('seller_shop_url', '').strip()
@@ -49,7 +47,6 @@ def create_order_form():
         current_app.logger.info(f"=== CREATE ORDER DEBUG ===")
         current_app.logger.info(f"URL received: {repr(first_listing_url)}")
         current_app.logger.info(f"URL length: {len(first_listing_url) if first_listing_url else 0}")
-        current_app.logger.info(f"Max amount: {max_amount}")
         
         # Validation
         if not first_listing_url:
@@ -107,7 +104,6 @@ def create_order_form():
             order = Order(
                 seller_name=listing_data['seller_name'],
                 creator_id=current_user.id,
-                max_amount=max_amount if max_amount else None,
                 deadline=deadline,
                 payment_timing=payment_timing,
                 seller_shop_url=seller_shop_url if seller_shop_url else None,
@@ -147,9 +143,11 @@ def create_order_form():
             import traceback
             current_app.logger.error(f'Traceback: {traceback.format_exc()}')
             flash(f'Erreur lors de la création: {str(e)}', 'danger')
-            return render_template('create_order_form.html')
+            return render_template('create_order_form.html', user=auth_service.get_current_user())
     
-    return render_template('create_order_form.html')
+    # Get current user data for pre-filling form
+    current_user = auth_service.get_current_user()
+    return render_template('create_order_form.html', user=current_user)
 
 @views_bp.route('/orders')
 @login_required
@@ -245,8 +243,9 @@ def clear_cache():
     return redirect(url_for('views.index'))
 
 @views_bp.route('/profile')
+@views_bp.route('/profile/<tab>')
 @login_required
-def profile():
+def profile(tab=None):
     """User profile page"""
     user = auth_service.get_current_user()
     from models import Order, Listing
@@ -256,7 +255,23 @@ def profile():
         'total_listings': Listing.query.filter_by(user_id=user.id).count(),
         'active_listings': Listing.query.filter_by(user_id=user.id, status='For Sale').count()
     }
-    return render_template('profile.html', user=user, stats=user_stats)
+    return render_template('profile.html', user=user, stats=user_stats, default_tab=tab)
+
+@views_bp.route('/@<username>')
+def public_profile(username):
+    """Public profile page for a user"""
+    from models import User, Order, Listing
+    user = User.query.filter_by(mutual_order_username=username).first()
+    if not user:
+        return render_template('errors/404.html'), 404
+    
+    user_stats = {
+        'orders_created': Order.query.filter_by(creator_id=user.id).count(),
+        'orders_participated': Order.query.join(Listing).filter(Listing.user_id == user.id).distinct().count(),
+        'total_listings': Listing.query.filter_by(user_id=user.id).count(),
+        'active_listings': Listing.query.filter_by(user_id=user.id, status='For Sale').count()
+    }
+    return render_template('profile.html', user=user, stats=user_stats, is_public=True)
 
 @views_bp.route('/settings')  
 @login_required

@@ -137,6 +137,7 @@ class Order(db.Model):
                 'user': {
                     'id': participant.id,
                     'username': participant.username,
+                    'mutual_order_username': participant.mutual_order_username,
                     'is_creator': participant.id == self.creator_id
                 },
                 'summary': self.get_user_summary(participant.id)
@@ -151,7 +152,11 @@ class Order(db.Model):
             'seller_name': self.seller_name,
             'status': self.status,
             'creator_id': self.creator_id,
-            'creator': {'id': self.creator_id, 'username': self.creator.username},
+            'creator': {
+                'id': self.creator_id, 
+                'username': self.creator.username,
+                'mutual_order_username': self.creator.mutual_order_username
+            },
             'total_price': self.total_price,
             'shipping_cost': self.shipping_cost,
             'taxes': self.taxes,
@@ -163,6 +168,7 @@ class Order(db.Model):
             'payment_timing': self.payment_timing,
             'created_at': self.created_at.isoformat(),
             'user_location': self.user_location,
+            'paypal_link': self.paypal_link,
             'seller_shop_url': self.seller_shop_url,
             'direct_url': self.direct_url,
             'participants_count': self.participants_count,
@@ -170,6 +176,7 @@ class Order(db.Model):
                 {
                     'id': p.id, 
                     'username': p.username, 
+                    'mutual_order_username': p.mutual_order_username,
                     'is_creator': p.id == self.creator_id
                 } for p in self.participants
             ]

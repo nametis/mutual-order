@@ -2,8 +2,16 @@
 <div class="bg-white rounded-lg shadow p-4 sm:p-6">
     
     <!-- Header line with seller info and actions - Desktop: single line, Mobile: wrapping -->
-    <div class="flex flex-wrap items-baseline gap-2 sm:gap-4 mb-3">
-        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 min-w-0" x-text="'Commande chez ' + order.seller_name"></h1>
+    <div class="flex flex-wrap items-baseline gap-2 sm:gap-4 mb-3" 
+         x-data="{ hasFav: false, loadingFav: false, async init(){ try { const res = await fetch('/api/user/favorite_sellers'); if(res.ok){ const data = await res.json(); this.hasFav = (data.sellers||[]).some(s => s.seller_name === order.seller_name); } } catch(e){} } }">
+        <!-- Favorite Star -->
+        <button @click.prevent="if(loadingFav) return; loadingFav = true; (hasFav ? fetch('/api/user/favorite_sellers/' + encodeURIComponent(order.seller_name), { method: 'DELETE' }) : fetch('/api/user/favorite_sellers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seller: order.seller_name }) })).then(r => { if(r.ok){ hasFav = !hasFav; } }).catch(()=>{}).finally(()=>{ loadingFav = false; })"
+                class="px-2 py-1 rounded-full border border-transparent hover:border-yellow-400 transition-colors"
+                :title="hasFav ? 'Déjà en favoris' : 'Ajouter aux favoris'">
+            <span x-text="hasFav ? '⭐' : '☆'"></span>
+        </button>
+        
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 min-w-0" x-text="order.seller_name"></h1>
         
         <!-- Rating Badge -->
         <div x-show="sellerInfo.rating" class="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded-full">
@@ -27,7 +35,7 @@
         <a x-show="order.direct_url" :href="order.direct_url" target="_blank"
            class="flex items-center space-x-1 px-3 py-1 bg-white border border-black rounded-full text-black hover:bg-gray-50 text-xs transition-colors">
             <span>🔗</span>
-            <span>Site vendeur</span>
+            <span>Site web du vendeur</span>
         </a>
     </div>
 
@@ -52,14 +60,8 @@
             <span class="text-xs font-medium text-gray-700">Participants</span>
         </div>                            
 
-        <!-- Time remaining until deadline - EDITABLE -->
-        <div class="relative p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
-            <!-- Edit pen icon -->
-            <button x-show="order.creator_id === currentUserId || isAdmin" 
-                    @click="editField = 'deadline'"
-                    class="absolute top-1 right-1 text-xs text-gray-600 hover:text-black transition-colors">
-                ✏️
-            </button>
+        <!-- Time remaining until deadline -->
+        <div class="p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
             <div class="flex items-center space-x-1 mb-1">
                 <span class="text-sm">🕒</span>
                 <span class="text-sm font-bold text-gray-900" 
@@ -75,35 +77,27 @@
         
         <!-- Creator -->
         <div class="p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
-            <div class="flex items-center space-x-1 mb-1">
+            <span class="text-xs font-medium text-gray-700 mb-1">Créateur</span>
+            <div class="flex items-center space-x-1">
                 <span class="text-sm">👑</span>
-                <span class="text-sm font-bold text-gray-900" x-text="order.creator?.username || 'N/A'"></span>
+                <a x-show="order.creator?.mutual_order_username" 
+                   :href="'/@' + order.creator.mutual_order_username" 
+                   class="text-sm font-bold text-blue-600 hover:text-blue-800 hover:underline" 
+                   x-text="'@' + order.creator.mutual_order_username"></a>
+                <span x-show="!order.creator?.mutual_order_username" 
+                      class="text-sm font-bold text-gray-900" 
+                      x-text="order.creator?.username || 'N/A'"></span>
             </div>
-            <span class="text-xs font-medium text-gray-700">Créateur</span>
         </div>
 
-        <!-- Payment rule - EDITABLE -->
-        <div class="relative p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
-            <!-- Edit pen icon -->
-            <button x-show="order.creator_id === currentUserId || isAdmin" 
-                    @click="editField = 'payment'"
-                    class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-                ✏️
-            </button>
-            <div class="flex items-center space-x-1 mb-1">
-                <span class="text-xs font-medium text-gray-900">💳 Paiement</span>
-            </div>
+        <!-- Payment rule -->
+        <div class="p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
+            <span class="text-xs font-medium text-gray-700 mb-1">💳 Paiement</span>
             <span class="text-sm font-bold text-gray-700" x-text="order.payment_timing"></span>
         </div>      
         
         <!-- Shipping & Taxes - spans 2 columns on desktop, full width on mobile/tablet -->
-        <div class="relative col-span-2 md:col-span-4 xl:col-span-2 p-2 sm:p-3 bg-gray-100 rounded flex flex-col sm:flex-row items-center justify-between min-h-[60px] sm:min-h-[70px]">
-            <!-- Edit pen icon -->
-            <button x-show="order.creator_id === currentUserId || isAdmin" 
-                    @click="editField = 'fees'"
-                    class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-                ✏️
-            </button>
+        <div class="col-span-2 md:col-span-4 xl:col-span-2 p-2 sm:p-3 bg-gray-100 rounded flex flex-col sm:flex-row items-center justify-between min-h-[60px] sm:min-h-[70px]">
             <div class="flex items-center space-x-1 mb-2 sm:mb-0">
                 <span class="text-sm">📦</span>
                 <span class="text-sm font-medium text-gray-700">Frais de port :</span>
@@ -115,14 +109,8 @@
             </div>
         </div>
 
-        <!-- Discount - EDITABLE -->
-        <div class="relative p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
-            <!-- Edit pen icon -->
-            <button x-show="order.creator_id === currentUserId || isAdmin" 
-                    @click="editField = 'discount'"
-                    class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-                ✏️
-            </button>
+        <!-- Discount -->
+        <div class="p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
             <div class="flex items-center space-x-1 mb-1">
                 <span class="text-sm">💸</span>
                 <span class="text-lg font-bold" 
@@ -137,38 +125,26 @@
             <!-- Intentionally blank -->
         </div>
 
-        <!-- Location - EDITABLE -->
-        <div class="relative p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
-            <!-- Edit pen icon -->
-            <button x-show="order.creator_id === currentUserId || isAdmin" 
-                    @click="editField = 'location'"
-                    class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-                ✏️
-            </button>
-            <div class="flex items-center space-x-1 mb-1">
-                <span class="text-sm">🏠</span>
-                <span class="text-xs font-bold text-gray-900" x-text="order.user_location || 'N/A'"></span>
-            </div>
-            <span class="text-xs font-medium text-gray-700">Localisation</span>
+        <!-- Location -->
+        <div class="p-2 sm:p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]">
+            <span class="text-xs font-medium text-gray-700 mb-1">🏠 Localisation</span>
+            <span class="text-sm font-bold text-gray-900" x-text="order.user_location || 'N/A'"></span>
         </div>
 
-        <!-- PayPal Me link - EDITABLE -->
-        <div class="relative p-2 sm:p-3 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]"
+        <!-- PayPal Me link -->
+        <div class="p-2 sm:p-3 rounded text-center flex flex-col items-center justify-center min-h-[60px] sm:min-h-[70px]"
              :class="order.paypal_link ? 'bg-blue-100 cursor-pointer hover:bg-blue-200' : 'bg-gray-100'"
-             @click="order.paypal_link && editField !== 'paypal' ? window.open(order.paypal_link, '_blank') : null">
-            <!-- Edit pen icon -->
-            <button x-show="order.creator_id === currentUserId || isAdmin" 
-                    @click.stop="editField = 'paypal'"
-                    class="absolute top-1 right-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-                ✏️
-            </button>
-            <div class="flex items-center space-x-1 mb-1">
-                <span class="text-sm">💳</span>
-                <span class="text-sm font-bold" 
-                      :class="order.paypal_link ? 'text-blue-600' : 'text-gray-400'"
-                      x-text="order.paypal_link ? 'Actif' : 'N/A'"></span>
+             @click="order.paypal_link ? window.open(order.paypal_link, '_blank') : null">
+            <div x-show="order.paypal_link" class="flex flex-col items-center">
+                <svg class="w-4 h-4 mb-1" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.543-.676c-.95-1.09-2.754-1.38-4.61-1.38H8.89c-.524 0-.968.382-1.05.9L6.32 19.337h4.676l1.12-7.106c.082-.518.526-.9 1.05-.9h2.19c3.61 0 6.4-1.38 7.2-5.4.1-.5.2-1.1.2-1.7z"/>
+                </svg>
+                <span class="text-sm font-bold text-blue-600">PayPal.me</span>
             </div>
-            <span class="text-xs font-medium text-gray-700">PayPal Me</span>
+            <div x-show="!order.paypal_link" class="flex flex-col items-center">
+                <span class="text-xs font-medium text-gray-700 mb-1">PayPal.me</span>
+                <span class="text-sm font-bold text-gray-400">N/A</span>
+            </div>
         </div>
 
     </div>

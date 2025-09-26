@@ -201,7 +201,7 @@ def get_status_info(status):
     """
     status_map = {
         'building': {
-            'text': '🛠️ COMPOSITION',
+            'text': '🛠️ COLLECTE',
             'class': 'bg-yellow-100 text-yellow-800'
         },
         'validation': {

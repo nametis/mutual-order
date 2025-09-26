@@ -22,7 +22,7 @@
             <div class="flex justify-between items-center mb-8">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">Mes Commandes</h1>
-                    <p class="text-gray-600">Gérez vos commandes groupées Discogs</p>
+                    <p class="text-gray-600">Gérez vos commandes groupées</p>
                 </div>
                 <a href="/create_order_form" 
                    class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
@@ -31,31 +31,45 @@
                 </a>
             </div>
 
-            <div class="bg-white rounded-lg shadow p-2 mb-6 flex space-x-2 text-sm font-medium">
-                <button @click="setFilter('current')"
-                        :class="{'bg-gray-100 text-gray-900': filter === 'current', 'text-gray-500': filter !== 'current'}"
-                        class="px-4 py-2 rounded-lg transition-colors">Mes commandes en cours</button>
-                <button @click="setFilter('open')"
-                        :class="{'bg-gray-100 text-gray-900': filter === 'open', 'text-gray-500': filter !== 'open'}"
-                        class="px-4 py-2 rounded-lg transition-colors">Commandes ouvertes</button>
-                <button @click="setFilter('past')"
-                        :class="{'bg-gray-100 text-gray-900': filter === 'past', 'text-gray-500': filter !== 'past'}"
-                        class="px-4 py-2 rounded-lg transition-colors">Mes commandes passées</button>
-                <button @click="setFilter('closed')"
-                        :class="{'bg-gray-100 text-gray-900': filter === 'closed', 'text-gray-500': filter !== 'closed'}"
-                        class="px-4 py-2 rounded-lg transition-colors">Commandes clôturées</button>
-            </div>
-
-            <div x-show="filter === 'current'" class="flex space-x-2 text-sm mb-4 ml-2">
-                <button @click="setSubFilter('all')"
-                        :class="{'bg-blue-100 text-blue-800': subFilter === 'all', 'bg-gray-200 text-gray-700': subFilter !== 'all'}"
-                        class="px-3 py-1 rounded-full transition-colors">Tous</button>
-                <button @click="setSubFilter('creator')"
-                        :class="{'bg-yellow-100 text-yellow-800': subFilter === 'creator', 'bg-gray-200 text-gray-700': subFilter !== 'creator'}"
-                        class="px-3 py-1 rounded-full transition-colors">Créateur</button>
-                <button @click="setSubFilter('joiner')"
-                        :class="{'bg-green-100 text-green-800': subFilter === 'joiner', 'bg-gray-200 text-gray-700': subFilter !== 'joiner'}"
-                        class="px-3 py-1 rounded-full transition-colors">Participant</button>
+            <!-- Main Tabs and Filters -->
+            <div class="bg-white rounded-lg shadow p-4 mb-6">
+                <!-- Main Tabs -->
+                <div class="flex space-x-2 text-sm font-medium mb-4">
+                    <button @click="setMainTab('all')"
+                            :class="{'bg-gray-100 text-gray-900': mainTab === 'all', 'text-gray-500': mainTab !== 'all'}"
+                            class="px-4 py-2 rounded-lg transition-colors">Toutes les commandes</button>
+                    <button @click="setMainTab('my')"
+                            :class="{'bg-gray-100 text-gray-900': mainTab === 'my', 'text-gray-500': mainTab !== 'my'}"
+                            class="px-4 py-2 rounded-lg transition-colors">Mes Commandes</button>
+                </div>
+                
+                <!-- Filter Section -->
+                <div class="flex flex-wrap gap-3 items-center">
+                    <span class="text-sm font-medium text-gray-700">Filtrer par :</span>
+                    
+                    <!-- Role Filter Buttons -->
+                    <div class="flex space-x-2">
+                        <button @click="toggleFilter('creator')"
+                                :class="filters.creator ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'"
+                                class="px-3 py-1 rounded-full border text-sm font-medium transition-colors">
+                            Créateur
+                        </button>
+                        <button @click="toggleFilter('participant')"
+                                :class="filters.participant ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'"
+                                class="px-3 py-1 rounded-full border text-sm font-medium transition-colors">
+                            Participant
+                        </button>
+                    </div>
+                    
+                    <div class="border-l border-gray-300 h-6"></div>
+                    
+                    <!-- Archive Filter Button -->
+                    <button @click="toggleFilter('archived')"
+                            :class="filters.archived ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'"
+                            class="px-3 py-1 rounded-full border text-sm font-medium transition-colors">
+                        Archivées
+                    </button>
+                </div>
             </div>
 
             <template x-if="filteredOrders.length > 0">
@@ -104,7 +118,12 @@
                                     <template x-for="participant in order.participants" :key="participant.id">
                                         <div class="px-2 py-1 rounded-full text-xs"
                                             :class="participant.is_creator ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'">
-                                            <span x-text="participant.username"></span>
+                                            <a x-show="participant.mutual_order_username" 
+                                               :href="'/@' + participant.mutual_order_username" 
+                                               class="hover:underline" 
+                                               x-text="'@' + participant.mutual_order_username"></a>
+                                            <span x-show="!participant.mutual_order_username" 
+                                                  x-text="participant.username"></span>
                                             <span x-show="participant.is_creator" class="ml-1">👑</span>
                                         </div>
                                     </template>
@@ -143,8 +162,12 @@
             loading: true,
             orders: [],
             filteredOrders: [],
-            filter: 'current',
-            subFilter: 'all',
+            mainTab: 'all',
+            filters: {
+                creator: false,
+                participant: false,
+                archived: false
+            },
             
             async init() {
                 await this.loadOrders();
@@ -163,43 +186,71 @@
                 }
             },
             
-            setFilter(newFilter) {
-                this.filter = newFilter;
+            setMainTab(newTab) {
+                this.mainTab = newTab;
                 this.applyFilters();
             },
             
-            setSubFilter(newSubFilter) {
-                this.subFilter = newSubFilter;
+            toggleFilter(filterType) {
+                if (filterType === 'creator') {
+                    // If selecting creator, deselect participant
+                    this.filters.creator = !this.filters.creator;
+                    if (this.filters.creator) {
+                        this.filters.participant = false;
+                    }
+                } else if (filterType === 'participant') {
+                    // If selecting participant, deselect creator
+                    this.filters.participant = !this.filters.participant;
+                    if (this.filters.participant) {
+                        this.filters.creator = false;
+                    }
+                } else {
+                    // For other filters (like archived), just toggle
+                    this.filters[filterType] = !this.filters[filterType];
+                }
                 this.applyFilters();
             },
             
             applyFilters() {
                 let filtered = [...this.orders];
-                
-                if (this.filter === 'current') {
-                    filtered = filtered.filter(order => 
-                        ['building', 'validation', 'ordered', 'delivered'].includes(order.status) &&
-                        (order.is_creator || order.is_participant)
-                    );
-                    
-                    if (this.subFilter === 'creator') {
-                        filtered = filtered.filter(order => order.is_creator);
-                    } else if (this.subFilter === 'joiner') {
-                        filtered = filtered.filter(order => order.is_participant && !order.is_creator);
-                    }
-                } else if (this.filter === 'open') {
-                    filtered = filtered.filter(order => 
-                        ['building', 'validation'].includes(order.status) &&
-                        !order.is_participant
-                    );
-                } else if (this.filter === 'past') {
-                    filtered = filtered.filter(order => 
-                        order.status === 'closed' &&
-                        (order.is_creator || order.is_participant)
-                    );
-                } else if (this.filter === 'closed') {
-                    filtered = filtered.filter(order => order.status === 'closed');
+                const isJoined = (o) => o.is_creator || o.is_participant;
+                const isBuilding = (o) => o.status === 'building';
+                const isArchived = (o) => ['delivered', 'closed'].includes(o.status);
+
+                // Apply main tab filter
+                if (this.mainTab === 'all') {
+                    // Show all orders where user is involved OR building phase orders
+                    filtered = filtered.filter(o => isJoined(o) || isBuilding(o));
+                } else if (this.mainTab === 'my') {
+                    // Only orders where user is creator or participant
+                    filtered = filtered.filter(o => isJoined(o));
                 }
+
+                // Apply role filters (creator OR participant - mutually exclusive)
+                if (this.filters.creator) {
+                    filtered = filtered.filter(o => o.is_creator);
+                } else if (this.filters.participant) {
+                    // Show orders where user is participant but NOT creator
+                    filtered = filtered.filter(o => o.is_participant && !o.is_creator);
+                }
+
+                // Apply archive filter
+                if (this.filters.archived) {
+                    filtered = filtered.filter(o => isArchived(o));
+                } else {
+                    // By default, hide archived orders unless specifically requested
+                    filtered = filtered.filter(o => !isArchived(o));
+                }
+
+                // Sort orders
+                filtered.sort((a, b) => {
+                    // creator first
+                    if (a.is_creator !== b.is_creator) return a.is_creator ? -1 : 1;
+                    // then participant
+                    if (a.is_participant !== b.is_participant) return a.is_participant ? -1 : 1;
+                    // then by creation date (newest first)
+                    return new Date(b.created_at) - new Date(a.created_at);
+                });
                 
                 this.filteredOrders = filtered;
             },
@@ -223,7 +274,7 @@
             
             getStatusText(status) {
                 const texts = {
-                    'building': 'Composition',
+                    'building': 'Collecte',
                     'validation': 'Validation', 
                     'ordered': 'Commandé',
                     'delivered': 'Livré',

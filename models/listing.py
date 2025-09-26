@@ -38,6 +38,7 @@ class Listing(db.Model):
             'added_at': self.added_at.isoformat() if self.added_at else None,
             'user_id': self.user_id,
             'username': self.user.username,
+            'mutual_order_username': self.user.mutual_order_username,
             'order_id': self.order_id
         }
     

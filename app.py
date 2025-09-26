@@ -172,6 +172,217 @@ def register_cli_commands(app):
             print("No cache available or error clearing cache.")
     
     @app.cli.command()
+    def fix_friendships():
+        """Fix existing friendships to be bidirectional"""
+        from models import Friend, User
+        
+        print("🔧 Fixing friendships to be bidirectional...")
+        
+        # Get all existing friendships
+        friendships = Friend.query.all()
+        fixed_count = 0
+        
+        for friendship in friendships:
+            # Check if the reverse friendship exists
+            reverse_friendship = Friend.query.filter_by(
+                user_id=friendship.friend_user_id,
+                friend_user_id=friendship.user_id
+            ).first()
+            
+            if not reverse_friendship:
+                # Create the reverse friendship
+                reverse_friend = Friend(
+                    user_id=friendship.friend_user_id,
+                    friend_user_id=friendship.user_id
+                )
+                db.session.add(reverse_friend)
+                fixed_count += 1
+                print(f"✅ Added reverse friendship: {friendship.user_id} <-> {friendship.friend_user_id}")
+        
+        if fixed_count > 0:
+            db.session.commit()
+            print(f"🎉 Fixed {fixed_count} friendships!")
+        else:
+            print("✅ All friendships are already bidirectional!")
+    
+    @app.cli.command()
+    def debug_friendships():
+        """Debug friendship data for specific users"""
+        from models import Friend, FriendRequest, User
+        
+        username1 = input("Enter first username: ").strip()
+        username2 = input("Enter second username: ").strip()
+        
+        # Find users
+        user1 = User.query.filter_by(mutual_order_username=username1).first()
+        if not user1:
+            user1 = User.query.filter_by(discogs_username=username1).first()
+        
+        user2 = User.query.filter_by(mutual_order_username=username2).first()
+        if not user2:
+            user2 = User.query.filter_by(discogs_username=username2).first()
+        
+        if not user1 or not user2:
+            print("❌ One or both users not found")
+            return
+        
+        print(f"🔍 User 1: {user1.username} (ID: {user1.id})")
+        print(f"🔍 User 2: {user2.username} (ID: {user2.id})")
+        
+        # Check friendships
+        friendship_1_to_2 = Friend.query.filter_by(user_id=user1.id, friend_user_id=user2.id).first()
+        friendship_2_to_1 = Friend.query.filter_by(user_id=user2.id, friend_user_id=user1.id).first()
+        
+        print(f"\n📊 Friendships:")
+        print(f"  {user1.username} → {user2.username}: {'✅' if friendship_1_to_2 else '❌'}")
+        print(f"  {user2.username} → {user1.username}: {'✅' if friendship_2_to_1 else '❌'}")
+        
+        # Check friend requests
+        requests_1_to_2 = FriendRequest.query.filter_by(requester_id=user1.id, requested_id=user2.id).all()
+        requests_2_to_1 = FriendRequest.query.filter_by(requester_id=user2.id, requested_id=user1.id).all()
+        
+        print(f"\n📨 Friend Requests:")
+        print(f"  {user1.username} → {user2.username}: {len(requests_1_to_2)} requests")
+        for req in requests_1_to_2:
+            print(f"    - Status: {req.status}, Created: {req.created_at}")
+        
+        print(f"  {user2.username} → {user1.username}: {len(requests_2_to_1)} requests")
+        for req in requests_2_to_1:
+            print(f"    - Status: {req.status}, Created: {req.created_at}")
+    
+    @app.cli.command()
+    def clean_friendships():
+        """Clean all friendship data for specific users"""
+        from models import Friend, FriendRequest, User
+        
+        username1 = input("Enter first username: ").strip()
+        username2 = input("Enter second username: ").strip()
+        
+        # Find users
+        user1 = User.query.filter_by(mutual_order_username=username1).first()
+        if not user1:
+            user1 = User.query.filter_by(discogs_username=username1).first()
+        
+        user2 = User.query.filter_by(mutual_order_username=username2).first()
+        if not user2:
+            user2 = User.query.filter_by(discogs_username=username2).first()
+        
+        if not user1 or not user2:
+            print("❌ One or both users not found")
+            return
+        
+        confirm = input(f"⚠️  This will delete ALL friendship data between {user1.username} and {user2.username}. Continue? (y/N): ")
+        if confirm.lower() != 'y':
+            print("❌ Cancelled")
+            return
+        
+        # Delete friendships
+        friendships_deleted = 0
+        for friendship in Friend.query.filter(
+            ((Friend.user_id == user1.id) & (Friend.friend_user_id == user2.id)) |
+            ((Friend.user_id == user2.id) & (Friend.friend_user_id == user1.id))
+        ).all():
+            db.session.delete(friendship)
+            friendships_deleted += 1
+        
+        # Delete friend requests
+        requests_deleted = 0
+        for request in FriendRequest.query.filter(
+            ((FriendRequest.requester_id == user1.id) & (FriendRequest.requested_id == user2.id)) |
+            ((FriendRequest.requester_id == user2.id) & (FriendRequest.requested_id == user1.id))
+        ).all():
+            db.session.delete(request)
+            requests_deleted += 1
+        
+        db.session.commit()
+        print(f"✅ Deleted {friendships_deleted} friendships and {requests_deleted} friend requests")
+    
+    @app.cli.command()
+    def nuke_friendships():
+        """⚠️  NUCLEAR OPTION: Delete ALL friendship and friend request data"""
+        from models import Friend, FriendRequest
+        
+        confirm = input("⚠️  This will delete ALL friendships and friend requests. Type 'DELETE ALL' to confirm: ")
+        if confirm != "DELETE ALL":
+            print("❌ Operation cancelled")
+            return
+        
+        # Count before deletion
+        friendship_count = Friend.query.count()
+        request_count = FriendRequest.query.count()
+        
+        print(f"🗑️  Deleting {friendship_count} friendships and {request_count} friend requests...")
+        
+        # Delete all friendships
+        Friend.query.delete()
+        
+        # Delete all friend requests
+        FriendRequest.query.delete()
+        
+        db.session.commit()
+        
+        print("💥 NUCLEAR CLEANUP COMPLETE! All friendship data has been deleted.")
+        print("✅ You can now add friends fresh from the start.")
+
+    @app.cli.command()
+    def debug_user_friendships():
+        """Debug all friendship data for a specific user"""
+        from models import Friend, FriendRequest, User
+        
+        username = input("Enter username to debug: ").strip()
+        if not username:
+            print("❌ Username is required")
+            return
+        
+        # Find user
+        user = User.query.filter_by(mutual_order_username=username).first()
+        if not user:
+            user = User.query.filter_by(discogs_username=username).first()
+        
+        if not user:
+            print("❌ User not found")
+            return
+        
+        print(f"🔍 Debugging friendships for: {user.username} (ID: {user.id})")
+        print(f"   Mutual Order Username: {user.mutual_order_username}")
+        print(f"   Discogs Username: {user.discogs_username}")
+        print()
+        
+        # Check friendships where this user is the main user
+        friendships_as_user = Friend.query.filter_by(user_id=user.id).all()
+        print(f"👥 Friendships where {user.username} is the main user:")
+        for friendship in friendships_as_user:
+            friend_user = User.query.get(friendship.friend_user_id)
+            print(f"   - {friend_user.username} (ID: {friendship.friend_user_id})")
+        
+        # Check friendships where this user is the friend
+        friendships_as_friend = Friend.query.filter_by(friend_user_id=user.id).all()
+        print(f"👥 Friendships where {user.username} is the friend:")
+        for friendship in friendships_as_friend:
+            main_user = User.query.get(friendship.user_id)
+            print(f"   - {main_user.username} (ID: {friendship.user_id})")
+        
+        # Check outgoing friend requests
+        outgoing_requests = FriendRequest.query.filter_by(requester_id=user.id).all()
+        print(f"📤 Outgoing friend requests from {user.username}:")
+        for request in outgoing_requests:
+            requested_user = User.query.get(request.requested_id)
+            print(f"   - To: {requested_user.username} (Status: {request.status})")
+        
+        # Check incoming friend requests
+        incoming_requests = FriendRequest.query.filter_by(requested_id=user.id).all()
+        print(f"📥 Incoming friend requests to {user.username}:")
+        for request in incoming_requests:
+            requester_user = User.query.get(request.requester_id)
+            print(f"   - From: {requester_user.username} (Status: {request.status})")
+        
+        print(f"\n📊 Summary:")
+        print(f"   - Total friendships as main user: {len(friendships_as_user)}")
+        print(f"   - Total friendships as friend: {len(friendships_as_friend)}")
+        print(f"   - Outgoing requests: {len(outgoing_requests)}")
+        print(f"   - Incoming requests: {len(incoming_requests)}")
+    
+    @app.cli.command()
     def create_admin():
         """Create an admin user"""
         from models import User

@@ -11,7 +11,14 @@
         <div class="max-h-96 overflow-y-auto p-4 space-y-4" x-ref="embeddedChatMessages">
             <template x-for="message in chatMessages" :key="message.id">
                 <div class="max-w-xs p-3 rounded-lg" :class="message.is_own ? 'bg-blue-100 ml-auto' : 'bg-gray-100'">
-                    <div class="font-semibold text-sm" x-text="message.username"></div>
+                    <div class="font-semibold text-sm">
+                        <a x-show="message.mutual_order_username && !message.is_own" 
+                           :href="'/@' + message.mutual_order_username" 
+                           class="text-blue-600 hover:text-blue-800 hover:underline" 
+                           x-text="message.username"></a>
+                        <span x-show="!message.mutual_order_username || message.is_own" 
+                              x-text="message.username"></span>
+                    </div>
                     <div class="text-sm" x-text="message.content"></div>
                     <div class="text-xs text-gray-500 mt-1" x-text="message.timestamp"></div>
                 </div>
@@ -48,7 +55,14 @@
                 <template x-for="message in chatMessages" :key="message.id">
                     <div class="max-w-xs p-3 rounded-lg"
                          :class="message.is_own ? 'bg-blue-100 ml-auto' : 'bg-gray-100'">
-                        <div class="font-semibold text-sm" x-text="message.username"></div>
+                        <div class="font-semibold text-sm">
+                            <a x-show="message.mutual_order_username && !message.is_own" 
+                               :href="'/@' + message.mutual_order_username" 
+                               class="text-blue-600 hover:text-blue-800 hover:underline" 
+                               x-text="message.username"></a>
+                            <span x-show="!message.mutual_order_username || message.is_own" 
+                                  x-text="message.username"></span>
+                        </div>
                         <div class="text-sm" x-text="message.content"></div>
                         <div class="text-xs text-gray-500 mt-1" x-text="message.timestamp"></div>
                     </div>

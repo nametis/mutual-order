@@ -3,22 +3,94 @@
 {% block title %}Profil - MUTUAL ORDER{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 py-6">
+<div x-data="profileApp()" x-init="init('{{ default_tab or 'profile' }}')" class="max-w-6xl mx-auto px-4 py-6">
     <!-- Header -->
     <div class="mb-8">
+        {% if is_public %}
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Profil de @{{ user.mutual_order_username }}</h1>
+        <p class="text-gray-600">Profil public et statistiques d'utilisation</p>
+        {% else %}
         <h1 class="text-3xl font-bold text-gray-900 mb-2">Mon Profil</h1>
         <p class="text-gray-600">Informations de votre compte et statistiques d'utilisation</p>
+        {% endif %}
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- User Info Card -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Left Sidebar - Navigation Only -->
         <div class="lg:col-span-1">
-            <div class="bg-white rounded-lg shadow p-6">
-                <div class="text-center mb-6">
-                    <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span class="text-3xl">👤</span>
+            <div class="bg-white rounded-lg shadow-sm border">
+                {% if is_public %}
+                <!-- Public Profile - Add as Friend Button -->
+                <div class="p-4">
+                    <button @click="addAsFriend()" 
+                            :disabled="isFriend || addingFriend || hasPendingRequest"
+                            :class="isFriend ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : (hasPendingRequest ? 'bg-yellow-100 text-yellow-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white')"
+                            class="w-full px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center">
+                        <svg x-show="!addingFriend && !hasPendingRequest" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        <svg x-show="addingFriend" class="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        <svg x-show="hasPendingRequest" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span x-text="isFriend ? 'Déjà ami' : (addingFriend ? 'Ajout...' : (hasPendingRequest ? 'Demande en attente' : 'Ajouter comme ami'))"></span>
+                    </button>
+                </div>
+                {% else %}
+                <!-- Private Profile - Navigation Menu -->
+                <nav class="p-2">
+                    <button @click="activeTab = 'profile'" 
+                            :class="activeTab === 'profile' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-50'"
+                            class="w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                        Mon profil
+                    </button>
+                    <button @click="activeTab = 'settings'" 
+                            :class="activeTab === 'settings' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-50'"
+                            class="w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        Mes informations
+                    </button>
+                    <button @click="activeTab = 'friends'" 
+                            :class="activeTab === 'friends' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-50'"
+                            class="w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        Mes amis
+                    </button>
+                    <button @click="activeTab = 'sellers'" 
+                            :class="activeTab === 'sellers' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-50'"
+                            class="w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                        </svg>
+                        Mes vendeurs favoris
+                    </button>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="lg:col-span-3">
+            <!-- Header Block -->
+            <div class="bg-white rounded-lg shadow-sm border p-6 mb-6">
+                <div class="flex items-center">
+                    <!-- 40% - Icon, handle and discogs account -->
+                    <div class="flex items-center space-x-4 w-2/5">
+                        <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span class="text-2xl">👤</span>
                     </div>
-                    <h2 class="text-xl font-bold text-gray-900">{{ user.username }}</h2>
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-900">@{{ user.username }}</h2>
                     <p class="text-gray-600">{{ user.discogs_username }}</p>
                     {% if user.is_admin %}
                         <span class="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium mt-2">
@@ -26,111 +98,535 @@
                         </span>
                     {% endif %}
                 </div>
-
-                <div class="space-y-3 text-sm">
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Membre depuis:</span>
-                        <span class="font-medium">{{ user.created_at.strftime('%d/%m/%Y') }}</span>
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Localisation:</span>
-                        <span class="font-medium">{{ user.default_location or 'Non définie' }}</span>
+                    
+                    <!-- 20% - Location -->
+                    <div class="text-center w-1/5">
+                        <div class="text-sm text-gray-600">Localisation</div>
+                        <div class="font-medium">{{ user.default_location or 'Non définie' }}</div>
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">PayPal:</span>
-                        <span class="font-medium">
+                    
+                    <!-- 20% - PayPal -->
+                    <div class="text-center w-1/5">
+                        <div class="text-sm text-gray-600">PayPal</div>
+                        <div class="font-medium">
                             {% if user.default_paypal_link %}
                                 <a href="{{ user.default_paypal_link }}" target="_blank" class="text-blue-600 hover:text-blue-800">Configuré</a>
                             {% else %}
                                 Non défini
                             {% endif %}
-                        </span>
                     </div>
                 </div>
 
-                <div class="mt-6">
-                    <a href="{{ url_for('views.settings') }}" 
-                       class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2">
-                        <span>⚙️</span>
-                        <span>Modifier le profil</span>
-                    </a>
+                    <!-- 20% - Copy link -->
+                    <div class="text-center w-1/5">
+                        <button @click="copyProfileLink()" 
+                                class="p-3 text-gray-400 hover:text-gray-600 transition-colors border border-gray-200 rounded-lg"
+                                title="Copier le lien de profil">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                            </svg>
+                        </button>
                 </div>
             </div>
         </div>
 
-        <!-- Statistics Cards -->
-        <div class="lg:col-span-2">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <!-- Orders Created -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <div class="flex items-center">
-                        <div class="p-3 rounded-full bg-yellow-100">
-                            <span class="text-2xl">👑</span>
+            <!-- Tab Content -->
+            <div class="space-y-6">
+                <!-- Profile Tab Content -->
+                <div x-show="activeTab === 'profile'">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <!-- Orders Participated -->
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-blue-100">
+                                    <span class="text-2xl">📦</span>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-600">A participé à</p>
+                                    <p class="text-2xl font-bold text-gray-900">{{ stats.orders_participated + stats.orders_created }} commandes</p>
+                                </div>
+                            </div>
                         </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-600">Commandes créées</p>
-                            <p class="text-2xl font-bold text-gray-900">{{ stats.orders_created }}</p>
+
+                        <!-- Total Listings -->
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-green-100">
+                                    <span class="text-2xl">💿</span>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-600">A commandé</p>
+                                    <p class="text-2xl font-bold text-gray-900">{{ stats.total_listings }} disques</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Favorite Sellers -->
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-pink-100">
+                                    <span class="text-2xl">🛍️</span>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-600">Vendeurs favoris</p>
+                                    <p class="text-2xl font-bold text-gray-900" id="fav-count">0</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Friends -->
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-purple-100">
+                                    <span class="text-2xl">👥</span>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-600">Amis</p>
+                                    <p class="text-2xl font-bold text-gray-900" id="friends-count">0</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Profile Settings Tab Content -->
+                <div x-show="activeTab === 'settings'" class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">Modifier le profil</h3>
+                    <form @submit.prevent="updateProfile()" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Nom d'utilisateur Mutual Order</label>
+                            <div class="flex space-x-2">
+                                <input type="text" x-model="profile.mutual_order_username" @input="checkUsernameAvailability()" required minlength="2" maxlength="30" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <div x-show="checking" class="flex items-center text-sm text-gray-500">Vérification...</div>
+                                <div x-show="!checking && feedback.message" class="flex items-center text-sm" :class="feedback.available ? 'text-green-600' : 'text-red-600'" x-text="feedback.message"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Ville par défaut</label>
+                            <input type="text" x-model="profile.default_location" placeholder="Ex: Paris, Lyon, Marseille..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Lien PayPal.me</label>
+                            <input type="url" x-model="profile.default_paypal_link" placeholder="https://paypal.me/votrenom" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div class="flex justify-end">
+                            <button type="submit" :disabled="!canSave" :class="canSave ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed'" class="px-6 py-2 text-white rounded-lg transition-colors">Sauvegarder</button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Friends Tab Content -->
+                <div x-show="activeTab === 'friends'" class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">Mes amis</h3>
+                    
+                    <!-- Friend Requests Section -->
+                    <div x-show="friendRequests.length > 0" class="mb-6">
+                        <h4 class="text-md font-medium text-gray-700 mb-3">Mes demandes d'ajout</h4>
+                        <div class="space-y-3">
+                            <template x-for="request in friendRequests" :key="request.id">
+                                <div class="flex items-center justify-between p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                                            <span class="text-sm">👤</span>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium text-gray-900">
+                                                <a x-show="request.requester.mutual_order_username" 
+                                                   :href="'/@' + request.requester.mutual_order_username" 
+                                                   class="text-blue-600 hover:text-blue-800 hover:underline" 
+                                                   x-text="request.requester.username"></a>
+                                                <span x-show="!request.requester.mutual_order_username" 
+                                                      x-text="request.requester.username"></span>
+                                            </div>
+                                            <div class="text-sm text-gray-500" x-text="'Demande envoyée le ' + new Date(request.created_at).toLocaleDateString('fr-FR')"></div>
+                                        </div>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button @click="acceptFriendRequest(request.id)" 
+                                                class="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700">
+                                            Accepter
+                                        </button>
+                                        <button @click="declineFriendRequest(request.id)" 
+                                                class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700">
+                                            Refuser
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    
+                    <!-- Add Friend Form -->
+                    <div class="mb-6">
+                        <h4 class="text-md font-medium text-gray-700 mb-3">Ajouter un ami</h4>
+                        <form @submit.prevent="addFriend()" class="flex items-center space-x-2">
+                            <input type="text" x-model="newFriendRef" placeholder="Collez une URL de profil (ex: https://.../@username) ou un nom"
+                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Envoyer demande</button>
+                        </form>
+                    </div>
+                    
+                    <!-- Friends List -->
+                    <div>
+                        <h4 class="text-md font-medium text-gray-700 mb-3">Tous mes amis</h4>
+                        <div class="space-y-2">
+                            <template x-for="friend in friends" :key="friend.id">
+                                <div class="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                            <span class="text-sm">👤</span>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium text-gray-900">
+                                                <a x-show="friend.mutual_order_username" 
+                                                   :href="'/@' + friend.mutual_order_username" 
+                                                   class="text-blue-600 hover:text-blue-800 hover:underline" 
+                                                   x-text="friend.username"></a>
+                                                <span x-show="!friend.mutual_order_username" 
+                                                      x-text="friend.username"></span>
+                                            </div>
+                                            <div class="text-sm text-gray-500" x-text="'Ami depuis le ' + new Date(friend.created_at).toLocaleDateString('fr-FR')"></div>
+                                        </div>
+                                    </div>
+                                    <button @click="removeFriend(friend)" 
+                                            class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700">
+                                        Retirer
+                                    </button>
+                                </div>
+                            </template>
+                            <div x-show="friends.length === 0" class="text-center text-gray-500 py-8">
+                                Aucun ami pour le moment.
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Orders Participated -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <div class="flex items-center">
-                        <div class="p-3 rounded-full bg-blue-100">
-                            <span class="text-2xl">👥</span>
-                        </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-600">Commandes rejointes</p>
-                            <p class="text-2xl font-bold text-gray-900">{{ stats.orders_participated }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Total Listings -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <div class="flex items-center">
-                        <div class="p-3 rounded-full bg-green-100">
-                            <span class="text-2xl">💿</span>
-                        </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-600">Total disques ajoutés</p>
-                            <p class="text-2xl font-bold text-gray-900">{{ stats.total_listings }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Active Listings -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <div class="flex items-center">
-                        <div class="p-3 rounded-full bg-purple-100">
-                            <span class="text-2xl">🎵</span>
-                        </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-600">Disques en cours</p>
-                            <p class="text-2xl font-bold text-gray-900">{{ stats.active_listings }}</p>
+                <!-- Favorite Sellers Tab Content -->
+                <div x-show="activeTab === 'sellers'" class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">Mes vendeurs favoris</h3>
+                    
+                    <!-- Add Seller Form -->
+                    <form @submit.prevent="addSeller()" class="flex items-center space-x-2 mb-4">
+                        <input type="url" x-model="newSellerUrl" placeholder="Collez l'URL du vendeur Discogs (ex: https://www.discogs.com/seller/nom)" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Ajouter</button>
+                    </form>
+                    
+                    <!-- Sellers List -->
+                    <div class="space-y-2">
+                        <template x-for="seller in sellers" :key="seller.id">
+                            <div class="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center">
+                                        <span class="text-sm">🛍️</span>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-gray-900" x-text="seller.seller_name"></div>
+                                        <a x-show="seller.shop_url" :href="seller.shop_url" target="_blank" class="text-sm text-blue-600 hover:text-blue-800">Voir la boutique</a>
+                                    </div>
+                                </div>
+                                <button @click="removeSeller(seller)" 
+                                        class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700">
+                                    Retirer
+                                </button>
+                            </div>
+                        </template>
+                        <div x-show="sellers.length === 0" class="text-center text-gray-500 py-8">
+                            Aucun vendeur favori pour le moment.
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="mt-6 bg-white rounded-lg shadow p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Actions rapides</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <a href="{{ url_for('views.create_order_form') }}" 
-                       class="flex items-center justify-center space-x-2 py-3 px-4 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors">
-                        <span>➕</span>
-                        <span>Créer une nouvelle commande</span>
-                    </a>
-                    <a href="{{ url_for('views.settings') }}" 
-                       class="flex items-center justify-center space-x-2 py-3 px-4 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
-                        <span>⚙️</span>
-                        <span>Paramètres du compte</span>
-                    </a>
                 </div>
             </div>
         </div>
     </div>
+
+    <script>
+    function profileApp() {
+        return {
+            activeTab: 'profile',
+            friends: [],
+            friendRequests: [],
+            newFriendRef: '',
+            profile: {
+                id: null,
+                mutual_order_username: '{{ user.username }}',
+                default_location: '{{ user.default_location or '' }}',
+                default_paypal_link: '{{ user.default_paypal_link or '' }}',
+                created_at: '{{ user.created_at.isoformat() }}',
+                discogs_username: '{{ user.discogs_username }}'
+            },
+            sellers: [],
+            newSellerUrl: '',
+            checking: false,
+            feedback: { available: true, message: 'Nom actuel' },
+            isPublic: {{ 'true' if is_public else 'false' }},
+            isFriend: false,
+            addingFriend: false,
+            hasPendingRequest: false,
+            get canSave() {
+                return (this.profile.mutual_order_username || '').length >= 2 && this.feedback.available && !this.checking;
+            },
+            async init(defaultTab = 'profile') {
+                this.activeTab = defaultTab;
+                if (this.isPublic) {
+                    await this.loadPublicData();
+                    await this.checkFriendshipStatus();
+                } else {
+                    await this.loadSellers();
+                    await this.loadFriends();
+                    await this.loadFriendRequests();
+                    // Update favorites count
+                    const el = document.getElementById('fav-count');
+                    if (el) el.textContent = this.sellers.length;
+                }
+            },
+            async loadPublicData() {
+                // Load friends and sellers for the public profile
+                await this.loadSellers();
+                await this.loadFriends();
+                // Update counts
+                const favEl = document.getElementById('fav-count');
+                const friendsEl = document.getElementById('friends-count');
+                if (favEl) favEl.textContent = this.sellers.length;
+                if (friendsEl) friendsEl.textContent = this.friends.length;
+            },
+            async checkFriendshipStatus() {
+                if (!this.isPublic) return;
+                try {
+                    const res = await fetch(`/api/user/friends/check/{{ user.mutual_order_username }}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        this.isFriend = data.is_friend || false;
+                        this.hasPendingRequest = data.has_pending_request || false;
+                    }
+                } catch (e) { console.error(e); }
+            },
+            async addAsFriend() {
+                if (this.isFriend || this.addingFriend || this.hasPendingRequest) return;
+                this.addingFriend = true;
+                try {
+                    const res = await fetch('/api/user/friends', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username: `{{ user.username }}` })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        this.hasPendingRequest = true;
+                        // Show success message
+                        const notification = document.createElement('div');
+                        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+                        notification.textContent = 'Demande d\'amitié envoyée !';
+                        document.body.appendChild(notification);
+                        setTimeout(() => {
+                            document.body.removeChild(notification);
+                        }, 2000);
+                    } else {
+                        const data = await res.json();
+                        alert(data.error || 'Erreur lors de l\'envoi de la demande');
+                    }
+                } catch (e) { 
+                    console.error('Exception:', e); 
+                }
+                finally { this.addingFriend = false; }
+            },
+            async loadSellers() {
+                try {
+                    const url = this.isPublic ? `/api/user/favorite_sellers/{{ user.mutual_order_username }}` : '/api/user/favorite_sellers';
+                    const res = await fetch(url);
+                    if (res.ok) {
+                        const data = await res.json();
+                        this.sellers = data.sellers || [];
+                    }
+                } catch (e) { console.error(e); }
+            },
+            async addSeller() {
+                if (!this.newSellerUrl) return;
+                try {
+                    const res = await fetch('/api/user/favorite_sellers', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: this.newSellerUrl })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        const idx = this.sellers.findIndex(s => s.seller_name === data.seller.seller_name);
+                        if (idx >= 0) this.sellers[idx] = data.seller; else this.sellers.unshift(data.seller);
+                        this.newSellerUrl = '';
+                        const el = document.getElementById('fav-count');
+                        if (el) el.textContent = this.sellers.length;
+                    }
+                } catch (e) { console.error(e); }
+            },
+            async loadFriends() {
+                try {
+                    const url = this.isPublic ? `/api/user/friends/{{ user.mutual_order_username }}` : '/api/user/friends';
+                    const res = await fetch(url);
+                    if (res.ok) {
+                        const data = await res.json();
+                        this.friends = data.friends || [];
+                        const el = document.getElementById('friends-count');
+                        if (el) el.textContent = this.friends.length;
+                    }
+                } catch (e) { console.error(e); }
+            },
+            async loadFriendRequests() {
+                try {
+                    const res = await fetch('/api/user/friend_requests');
+                    if (res.ok) {
+                        const data = await res.json();
+                        this.friendRequests = data.friend_requests || [];
+                    }
+                } catch (e) { console.error(e); }
+            },
+            async addFriend() {
+                if (!this.newFriendRef) return;
+                try {
+                    const res = await fetch('/api/user/friends', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: this.newFriendRef })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        this.newFriendRef = '';
+                        // Show success message
+                        const notification = document.createElement('div');
+                        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+                        notification.textContent = 'Demande d\'amitié envoyée !';
+                        document.body.appendChild(notification);
+                        setTimeout(() => {
+                            document.body.removeChild(notification);
+                        }, 2000);
+                    } else {
+                        alert(data.error || 'Erreur lors de l\'envoi de la demande');
+                    }
+                } catch (e) { console.error(e); }
+            },
+            async acceptFriendRequest(requestId) {
+                try {
+                    const res = await fetch(`/api/user/friend_requests/${requestId}/accept`, {
+                        method: 'POST'
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        // Remove from requests and add to friends
+                        this.friendRequests = this.friendRequests.filter(r => r.id !== requestId);
+                        this.friends.unshift(data.friend);
+                        const el = document.getElementById('friends-count');
+                        if (el) el.textContent = this.friends.length;
+                        
+                        // Show success message
+                        const notification = document.createElement('div');
+                        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+                        notification.textContent = 'Demande acceptée !';
+                        document.body.appendChild(notification);
+                        setTimeout(() => {
+                            document.body.removeChild(notification);
+                        }, 2000);
+                    }
+                } catch (e) { console.error(e); }
+            },
+            async declineFriendRequest(requestId) {
+                try {
+                    const res = await fetch(`/api/user/friend_requests/${requestId}/decline`, {
+                        method: 'POST'
+                    });
+                    if (res.ok) {
+                        // Remove from requests
+                        this.friendRequests = this.friendRequests.filter(r => r.id !== requestId);
+                        
+                        // Show success message
+                        const notification = document.createElement('div');
+                        notification.className = 'fixed top-4 right-4 bg-orange-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+                        notification.textContent = 'Demande refusée';
+                        document.body.appendChild(notification);
+                        setTimeout(() => {
+                            document.body.removeChild(notification);
+                        }, 2000);
+                    }
+                } catch (e) { console.error(e); }
+            },
+            async removeFriend(friend) {
+                try {
+                    const res = await fetch(`/api/user/friends/${encodeURIComponent(friend.username)}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        this.friends = this.friends.filter(f => f.id !== friend.id);
+                        const el = document.getElementById('friends-count');
+                        if (el) el.textContent = this.friends.length;
+                    }
+                } catch (e) { console.error(e); }
+            },
+            async removeSeller(seller) {
+                try {
+                    const res = await fetch(`/api/user/favorite_sellers/${encodeURIComponent(seller.seller_name)}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        this.sellers = this.sellers.filter(s => s.seller_name !== seller.seller_name);
+                        const el = document.getElementById('fav-count');
+                        if (el) el.textContent = this.sellers.length;
+                    }
+                } catch (e) { console.error(e); }
+            },
+            async checkUsernameAvailability() {
+                const name = this.profile.mutual_order_username || '';
+                if (name.length < 2) { this.feedback = { available: false, message: 'Au moins 2 caractères requis' }; return; }
+                if (name === '{{ user.username }}') { this.feedback = { available: true, message: 'Nom actuel' }; return; }
+                this.checking = true;
+                try {
+                    const response = await fetch('/api/check_username', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username: name })
+                    });
+                    this.feedback = response.ok ? await response.json() : { available: false, message: 'Erreur de vérification' };
+                } catch (e) {
+                    this.feedback = { available: false, message: 'Erreur de connexion' };
+                } finally { this.checking = false; }
+            },
+            async updateProfile() {
+                if (!this.canSave) return;
+                try {
+                    const res = await fetch('/api/user/profile', {
+                        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            mutual_order_username: this.profile.mutual_order_username,
+                            default_location: this.profile.default_location,
+                            default_paypal_link: this.profile.default_paypal_link
+                        })
+                    });
+                    if (res.ok) { this.showProfileModal = false; }
+                } catch (e) { console.error(e); }
+            },
+            async copyProfileLink() {
+                const url = `${window.location.origin}/@{{ user.mutual_order_username }}`;
+                try {
+                    await navigator.clipboard.writeText(url);
+                    // Show a subtle notification instead of alert
+                    const notification = document.createElement('div');
+                    notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+                    notification.textContent = 'Lien copié !';
+                    document.body.appendChild(notification);
+                    setTimeout(() => {
+                        document.body.removeChild(notification);
+                    }, 2000);
+                } catch (e) {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = url;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    const notification = document.createElement('div');
+                    notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+                    notification.textContent = 'Lien copié !';
+                    document.body.appendChild(notification);
+                    setTimeout(() => {
+                        document.body.removeChild(notification);
+                    }, 2000);
+                }
+            }
+        };
+    }
+    </script>
+
 </div>
 {% endblock %}

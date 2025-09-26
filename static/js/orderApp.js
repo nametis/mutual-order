@@ -24,7 +24,7 @@ function orderApp() {
         participantSummaryData: [],
         
         statusSteps: [
-            { key: 'building', label: 'Composition', emoji: '⛏️' },
+            { key: 'building', label: 'Collecte', emoji: '⛏️' },
             { key: 'validation', label: 'Validation', emoji: '⏳' },
             { key: 'ordered', label: 'Commandé', emoji: '✅' },
             { key: 'delivered', label: 'Livré', emoji: '💿' },
@@ -117,8 +117,6 @@ function orderApp() {
 
         initAdminForm() {
             this.adminForm = {
-                direct_url: this.order.direct_url || '',
-                max_amount: this.order.max_amount || '',
                 deadline: this.order.deadline ? this.order.deadline.split('T')[0] : '',
                 payment_timing: this.order.payment_timing || 'avant la commande',
                 shipping_cost: this.order.shipping_cost || 0,
@@ -354,16 +352,49 @@ function orderApp() {
         // --- Utility functions ---
         shareOrder() {
             const url = window.location.href;
-            if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(url).then(() => alert('Lien copié dans le presse-papiers !'));
-            } else {
-                const textArea = document.createElement("textarea");
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(url).then(() => {
+                        // Show a subtle notification instead of alert
+                        const notification = document.createElement('div');
+                        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+                        notification.textContent = 'Lien copié !';
+                        document.body.appendChild(notification);
+                        setTimeout(() => {
+                            document.body.removeChild(notification);
+                        }, 2000);
+                    });
+                } else {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = url;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    const notification = document.createElement('div');
+                    notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+                    notification.textContent = 'Lien copié !';
+                    document.body.appendChild(notification);
+                    setTimeout(() => {
+                        document.body.removeChild(notification);
+                    }, 2000);
+                }
+            } catch (e) {
+                // Fallback for any errors
+                const textArea = document.createElement('textarea');
                 textArea.value = url;
                 document.body.appendChild(textArea);
                 textArea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
-                alert('Lien copié dans le presse-papiers !');
+                const notification = document.createElement('div');
+                notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+                notification.textContent = 'Lien copié !';
+                document.body.appendChild(notification);
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 2000);
             }
         },
 
