@@ -265,4 +265,4 @@ def clear_cache():
 def settings():
     """User settings page"""
     user = auth_service.get_current_user()
-    return render_template('settings.html', current_user=user)
+    return render_template('user_settings.html', current_user=user)

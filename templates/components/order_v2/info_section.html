@@ -129,10 +129,10 @@
         </div>
     </div>
 
-    <!-- Desktop: Custom 5-column grid with strategic blanks -->
-    <div class="hidden sm:grid grid-cols-5 gap-2">
+    <!-- Desktop: Custom 6-column grid with strategic blanks -->
+    <div class="hidden sm:grid grid-cols-6 gap-2">
         
-        <!-- Row 1: DISQUES | PARTICIPANTS | RESTANTS | BLANK | CREATOR -->
+        <!-- Row 1: DISQUES | PARTICIPANTS | RESTANTS | BLANK | CREATOR | REGLE PAIEMENT -->
         
         <!-- Number of discs -->
         <div class="p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[70px]">
@@ -176,19 +176,38 @@
             <span class="text-xs font-medium text-gray-700">Créateur</span>
         </div>
 
-        <!-- Row 2: FRAIS DE PORT (2 cols) | BLANK | VILLE | PAYPAL ME -->
-
-        <!-- Shipping & Taxes - spans 2 columns -->
-        <div class="col-span-2 p-3 bg-gray-100 rounded flex flex-col sm:flex-row items-center justify-between min-h-[70px]">
-            <div class="flex items-center space-x-1 mb-2 sm:mb-0">
-                <span class="text-sm">📦</span>
-                <span class="text-sm font-medium text-gray-700">Frais de port + Taxes :</span>
+        <!-- Payment rule -->
+        <div class="p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[70px]">
+            <div class="flex items-center space-x-1 mb-1">
+                <span class="text-xs font-medium text-gray-900">💳 Paiement</span>
             </div>
-            <div class="text-center sm:text-right">
+            <span class="text-sm font-bold text-gray-700" x-text="order.payment_timing"></span>
+        </div>
+
+        <!-- Row 2: FRAIS DE PORT | DISCOUNT | BLANK | VILLE | PAYPAL ME -->
+
+        <!-- Shipping & Taxes -->
+        <div class="p-3 bg-gray-100 rounded flex flex-col items-center justify-center min-h-[70px]">
+            <div class="flex items-center space-x-1 mb-2">
+                <span class="text-sm">📦</span>
+                <span class="text-xs font-medium text-gray-700">Frais + Taxes</span>
+            </div>
+            <div class="text-center">
                 <div class="text-lg font-bold text-gray-900" x-text="(order.shipping_cost + order.taxes).toFixed(2) + '€'"></div>
                 <div class="text-xs text-gray-500" 
                      x-text="order.available_count > 0 ? '(' + ((order.shipping_cost + order.taxes) / order.available_count).toFixed(2) + '€/disque)' : ''"></div>
             </div>
+        </div>
+        
+        <!-- Discount -->
+        <div class="p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[70px]">
+            <div class="flex items-center space-x-1 mb-1">
+                <span class="text-sm">💸</span>
+                <span class="text-lg font-bold" 
+                      :class="order.discount && order.discount > 0 ? 'text-green-600' : 'text-gray-400'"
+                      x-text="order.discount && order.discount > 0 ? order.discount.toFixed(2) + '€' : '0€'"></span>
+            </div>
+            <span class="text-xs font-medium text-gray-700">Discount</span>
         </div>
 
         <!-- BLANK SPACE -->
@@ -217,29 +236,5 @@
             </div>
             <span class="text-xs font-medium text-gray-700">PayPal Me</span>
         </div>
-
-        <!-- Row 3: PAYMENT TIMING | DISCOUNT | (3 empty spaces) -->
-
-        <!-- Payment rule -->
-        <div class="p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[70px]">
-            <div class="flex items-center space-x-1 mb-1">
-                <span class="text-xs font-medium text-gray-900">💳 Paiement</span>
-            </div>
-            <span class="text-sm font-bold text-gray-700" x-text="order.payment_timing"></span>
-        </div>
-        
-        <!-- Discount -->
-        <div class="p-3 bg-gray-100 rounded text-center flex flex-col items-center justify-center min-h-[70px]">
-            <div class="flex items-center space-x-1 mb-1">
-                <span class="text-sm">💸</span>
-                <span class="text-lg font-bold" 
-                      :class="order.discount && order.discount > 0 ? 'text-green-600' : 'text-gray-400'"
-                      x-text="order.discount && order.discount > 0 ? order.discount.toFixed(2) + '€' : '0€'"></span>
-            </div>
-            <span class="text-xs font-medium text-gray-700">Discount</span>
-        </div>
-
-        <!-- Empty spaces to fill the row -->
-        <div class="col-span-3"></div>
     </div>
 </div>

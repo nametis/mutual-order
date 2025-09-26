@@ -16,8 +16,13 @@ function orderApp() {
         validationAgreement: false,
         userValidated: false,
         validations: [],
-        showMoreSettings: false,
-        editField: null,
+        
+        // New state variables
+        showAdminModal: false,
+        showAllMyListings: false,
+        showAllOtherListings: false,
+        participantSummaryData: [],
+        
         statusSteps: [
             { key: 'building', label: 'Composition', emoji: '⛏️' },
             { key: 'validation', label: 'Validation', emoji: '⏳' },
@@ -25,6 +30,7 @@ function orderApp() {
             { key: 'delivered', label: 'Livré', emoji: '💿' },
             { key: 'closed', label: 'Distribué', emoji: '🎁' }
         ],
+        
         adminForm: {
             direct_url: '',
             max_amount: '',
@@ -34,13 +40,15 @@ function orderApp() {
             taxes: 0,
             discount: 0,
             user_location: '',
-            paypal_link: ''
+            paypal_link: '',
+            seller_shop_url: ''
         },
 
         async init() {
             await this.loadOrder();
             await this.loadSellerInfo();
             await this.loadValidations();
+            await this.loadParticipantSummary();
             this.initAdminForm();
             this.checkUnreadMessages();
 
@@ -50,22 +58,6 @@ function orderApp() {
 
             setInterval(() => this.checkUnreadMessages(), 30000);
             this.loading = false;
-        },
-
-        async loadValidations() {
-            try {
-                const response = await fetch(`/api/orders/${this.getOrderId()}/validation-status`);
-                if (response.ok) {
-                    const data = await response.json();
-                    this.userValidated = data.user_validated;
-                    this.validations = data.all_validations || [];
-
-                    // Debug log:
-                    console.log('Validations loaded:', this.validations);
-                }
-            } catch (error) {
-                console.error('Error loading validations:', error);
-            }
         },
 
         async loadOrder() {
@@ -94,6 +86,30 @@ function orderApp() {
             }
         },
 
+        async loadParticipantSummary() {
+            try {
+                const response = await fetch(`/api/orders/${this.getOrderId()}/participant-summary`);
+                if (response.ok) {
+                    this.participantSummaryData = await response.json();
+                } else {
+                    // Fallback: generate from order data
+                    this.participantSummaryData = this.order.participants?.map(participant => ({
+                        user: participant,
+                        summary: this.order.current_user_summary || {
+                            listings_count: 0,
+                            subtotal: 0,
+                            fees_share: 0,
+                            discount_share: 0,
+                            total: 0
+                        }
+                    })) || [];
+                }
+            } catch (error) {
+                console.error('Error loading participant summary:', error);
+                this.participantSummaryData = [];
+            }
+        },
+
         updateListings() {
             this.myListings = this.order.listings?.filter(l => l.user_id === this.currentUserId) || [];
             this.otherListings = this.order.listings?.filter(l => l.user_id !== this.currentUserId) || [];
@@ -109,7 +125,8 @@ function orderApp() {
                 taxes: this.order.taxes || 0,
                 discount: this.order.discount || 0,
                 user_location: this.order.user_location || '',
-                paypal_link: this.order.paypal_link || ''
+                paypal_link: this.order.paypal_link || '',
+                seller_shop_url: this.order.seller_shop_url || ''
             };
         },
 
@@ -127,9 +144,13 @@ function orderApp() {
                     this.flashMessage = 'Annonce ajoutée avec succès !';
                     this.newListingUrl = '';
                     await this.loadOrder();
+                    await this.loadParticipantSummary();
                     setTimeout(() => this.flashMessage = '', 3000);
                 } else alert(result.error || 'Erreur lors de l\'ajout');
-            } catch (error) { console.error('Error adding listing:', error); alert('Erreur lors de l\'ajout'); }
+            } catch (error) { 
+                console.error('Error adding listing:', error); 
+                alert('Erreur lors de l\'ajout'); 
+            }
         },
 
         async removeListing(listingId) {
@@ -139,9 +160,12 @@ function orderApp() {
                 if (response.ok) {
                     this.flashMessage = 'Disque retiré de la commande';
                     await this.loadOrder();
+                    await this.loadParticipantSummary();
                     setTimeout(() => this.flashMessage = '', 3000);
                 }
-            } catch (error) { console.error('Error removing listing:', error); }
+            } catch (error) { 
+                console.error('Error removing listing:', error); 
+            }
         },
 
         async verifyAvailability() {
@@ -152,9 +176,12 @@ function orderApp() {
                 if (response.ok) {
                     this.flashMessage = result.message || 'Vérification terminée';
                     await this.loadOrder();
+                    await this.loadParticipantSummary();
                     setTimeout(() => this.flashMessage = '', 3000);
                 }
-            } catch (error) { console.error('Error verifying availability:', error); }
+            } catch (error) { 
+                console.error('Error verifying availability:', error); 
+            }
         },
 
         async updateOrderStatus(newStatus) {
@@ -166,9 +193,17 @@ function orderApp() {
                     body: JSON.stringify({ status: newStatus })
                 });
                 const result = await response.json();
-                if (response.ok) { this.flashMessage = 'Statut mis à jour avec succès'; await this.loadOrder(); setTimeout(() => this.flashMessage = '', 3000); }
-                else alert(result.error || 'Erreur lors de la mise à jour');
-            } catch (error) { console.error('Error updating status:', error); }
+                if (response.ok) { 
+                    this.flashMessage = 'Statut mis à jour avec succès'; 
+                    await this.loadOrder();
+                    await this.loadParticipantSummary();
+                    setTimeout(() => this.flashMessage = '', 3000); 
+                } else {
+                    alert(result.error || 'Erreur lors de la mise à jour');
+                }
+            } catch (error) { 
+                console.error('Error updating status:', error); 
+            }
         },
 
         async updateOrderSettings() {
@@ -181,7 +216,10 @@ function orderApp() {
                 const result = await response.json();
                 if (response.ok) { 
                     this.flashMessage = result.message || 'Paramètres mis à jour avec succès'; 
-                    await this.loadOrder(); 
+                    this.showAdminModal = false;
+                    await this.loadOrder();
+                    await this.loadParticipantSummary();
+                    this.initAdminForm(); // Refresh the form with new data
                     setTimeout(() => this.flashMessage = '', 3000); 
                 } else {
                     alert(result.error || 'Erreur lors de la mise à jour');
@@ -192,58 +230,40 @@ function orderApp() {
             }
         },
 
+        confirmDeleteOrder() {
+            if (confirm('ATTENTION: Supprimer définitivement cette commande et tous ses disques ? Cette action est irréversible.')) {
+                this.deleteOrder();
+            }
+        },
+
         async deleteOrder() {
-            if (!confirm('ATTENTION: Supprimer définitivement cette commande et tous ses disques ?')) return;
             try {
                 const response = await fetch(`/api/orders/${this.getOrderId()}`, { method: 'DELETE' });
                 const result = await response.json();
-                if (response.ok) { alert('Commande supprimée avec succès'); window.location.href = '/'; }
-                else alert(result.error || 'Erreur lors de la suppression');
-            } catch (error) { console.error('Error deleting order:', error); alert('Erreur lors de la suppression'); }
-        },
-
-        toggleChat() {
-            console.log('toggleChat fired', this.showChat);
-            this.showChat = !this.showChat;
-            if (this.showChat) { this.loadChatMessages(); this.markMessagesAsRead(); }
-        },
-
-        async loadChatMessages() {
-            try {
-                const response = await fetch(`/api/orders/${this.getOrderId()}/chat/messages`);
-                if (response.ok) {
-                    this.chatMessages = await response.json();
-                    this.scrollChatToBottom();
-                    setTimeout(() => { if (this.$refs.chatMessages) this.$refs.chatMessages.scrollTop = this.$refs.chatMessages.scrollHeight; }, 100);
+                if (response.ok) { 
+                    alert('Commande supprimée avec succès'); 
+                    window.location.href = '/'; 
+                } else {
+                    alert(result.error || 'Erreur lors de la suppression');
                 }
-            } catch (error) { console.error('Error loading chat messages:', error); }
-        },
-        
-        async sendMessage() {
-            if (!this.newMessage.trim()) return;
-            try {
-                const response = await fetch(`/api/orders/${this.getOrderId()}/chat/send`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: this.newMessage })
-                });
-                if (response.ok) { this.newMessage = ''; await this.loadChatMessages(); }
-            } catch (error) { console.error('Error sending message:', error); }
+            } catch (error) { 
+                console.error('Error deleting order:', error); 
+                alert('Erreur lors de la suppression'); 
+            }
         },
 
-        async checkUnreadMessages() {
-            if (this.showChat) return;
+        // --- Validation functions ---
+        async loadValidations() {
             try {
-                const response = await fetch(`/api/orders/${this.getOrderId()}/chat/unread`);
-                if (response.ok) { const data = await response.json(); this.unreadCount = data.unread_count; }
-            } catch (error) { console.error('Error checking unread messages:', error); }
-        },
-
-        async markMessagesAsRead() {
-            try {
-                await fetch(`/api/orders/${this.getOrderId()}/chat/mark_read`, { method: 'POST' });
-                this.unreadCount = 0;
-            } catch (error) { console.error('Error marking messages as read:', error); }
+                const response = await fetch(`/api/orders/${this.getOrderId()}/validation-status`);
+                if (response.ok) {
+                    const data = await response.json();
+                    this.userValidated = data.user_validated;
+                    this.validations = data.all_validations || [];
+                }
+            } catch (error) {
+                console.error('Error loading validations:', error);
+            }
         },
 
         async validateUserParticipation() {
@@ -270,6 +290,68 @@ function orderApp() {
             }
         },
 
+        // --- Chat functions ---
+        toggleChat() {
+            console.log('toggleChat fired', this.showChat);
+            this.showChat = !this.showChat;
+            if (this.showChat) { 
+                this.loadChatMessages(); 
+                this.markMessagesAsRead(); 
+            }
+        },
+
+        async loadChatMessages() {
+            try {
+                const response = await fetch(`/api/orders/${this.getOrderId()}/chat/messages`);
+                if (response.ok) {
+                    this.chatMessages = await response.json();
+                    this.scrollChatToBottom();
+                }
+            } catch (error) { 
+                console.error('Error loading chat messages:', error); 
+            }
+        },
+        
+        async sendMessage() {
+            if (!this.newMessage.trim()) return;
+            try {
+                const response = await fetch(`/api/orders/${this.getOrderId()}/chat/send`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: this.newMessage })
+                });
+                if (response.ok) { 
+                    this.newMessage = ''; 
+                    await this.loadChatMessages(); 
+                }
+            } catch (error) { 
+                console.error('Error sending message:', error); 
+            }
+        },
+
+        async checkUnreadMessages() {
+            if (this.showChat) return;
+            try {
+                const response = await fetch(`/api/orders/${this.getOrderId()}/chat/unread`);
+                if (response.ok) { 
+                    const data = await response.json(); 
+                    this.unreadCount = data.unread_count; 
+                }
+            } catch (error) { 
+                console.error('Error checking unread messages:', error); 
+            }
+        },
+
+        async markMessagesAsRead() {
+            try {
+                await fetch(`/api/orders/${this.getOrderId()}/chat/mark_read`, { method: 'POST' });
+                this.unreadCount = 0;
+            } catch (error) { 
+                console.error('Error marking messages as read:', error); 
+            }
+        },
+
+        // --- Utility functions ---
         shareOrder() {
             const url = window.location.href;
             if (navigator.clipboard && window.isSecureContext) {
@@ -371,6 +453,7 @@ function orderApp() {
             return this.validations.some(v => v.user_id === participantId && v.validated);
         },
 
+        // --- Computed properties ---
         get myTotal() {
             return this.order.current_user_summary ? this.order.current_user_summary.subtotal : 0;
         },
@@ -395,7 +478,6 @@ function orderApp() {
             // Show chat on step 2 (validation) or after step 3 (ordered/delivered/closed)
             const stepIndex = this.statusSteps.findIndex(s => s.key === this.order.status);
             return stepIndex === 1 || stepIndex >= 3;
-        },
-
+        }
     };
 }

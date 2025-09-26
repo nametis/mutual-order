@@ -1,5 +1,5 @@
 <!-- Participant Summary Toggle Component -->
-<div class="bg-white rounded-lg shadow mt-6">
+<div class="bg-white rounded-lg shadow mt-6" x-data="{ showParticipantSummary: false }">
     <!-- Toggle Header -->
     <div class="p-4 border-b border-gray-200 cursor-pointer" @click="showParticipantSummary = !showParticipantSummary">
         <div class="flex items-center justify-between">
@@ -10,8 +10,9 @@
             <div class="flex items-center space-x-2">
                 <span class="text-sm text-gray-600" x-text="'Total: ' + order.total_with_discount.toFixed(2) + '€'"></span>
                 <svg class="w-5 h-5 text-gray-500 transform transition-transform" 
-                     :class="{ 'rotate-180': showParticipantSummary }">
-                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                     :class="{ 'rotate-180': showParticipantSummary }"
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                           d="M19 9l-7 7-7-7"/>
                 </svg>
             </div>
@@ -19,7 +20,7 @@
     </div>
 
     <!-- Expandable Content -->
-    <div x-show="showParticipantSummary" x-collapse class="p-4">
+    <div x-show="showParticipantSummary" x-transition class="p-4">
         <!-- Mobile: Card Layout -->
         <div class="block sm:hidden space-y-4">
             <template x-for="participant in participantSummaryData" :key="participant.user.id + '_mobile_summary'">
@@ -83,7 +84,14 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     <template x-for="participant in participantSummaryData" :key="participant.user.id + '_desktop_summary'">
                         <tr>
-                            <td class="px-6 py-4 whitespace-nowrap">
+                            <td class="px-6 py-3 text-right text-sm font-bold text-gray-900" 
+                            x-text="order.total_with_discount.toFixed(2) + '€'"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>py-4 whitespace-nowrap">
                                 <div class="flex items-center space-x-2">
                                     <span class="text-sm font-medium text-gray-900" x-text="participant.user.username"></span>
                                     <span x-show="participant.user.is_creator" class="text-yellow-500">👑</span>
@@ -115,6 +123,13 @@
                         <td x-show="order.discount && order.discount > 0" class="px-6 py-3 text-right text-sm font-bold text-green-600" 
                             x-text="'-' + order.discount.toFixed(2) + '€'"></td>
                         <td class="px-6 py-3 text-right text-sm font-bold text-gray-900" 
+                            x-text="order.total_with_discount.toFixed(2) + '€'"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>py-3 text-right text-sm font-bold text-gray-900" 
                             x-text="order.total_with_discount.toFixed(2) + '€'"></td>
                     </tr>
                 </tfoot>
