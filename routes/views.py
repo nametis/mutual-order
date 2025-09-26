@@ -151,22 +151,6 @@ def create_order_form():
     
     return render_template('create_order_form.html')
 
-@views_bp.route('/profile')
-@login_required
-def profile():
-    """User profile page"""
-    user = auth_service.get_current_user()
-    
-    # Get user statistics
-    user_stats = {
-        'orders_created': Order.query.filter_by(creator_id=user.id).count(),
-        'orders_participated': Order.query.join(Listing).filter(Listing.user_id == user.id).distinct().count(),
-        'total_listings': Listing.query.filter_by(user_id=user.id).count(),
-        'active_listings': Listing.query.filter_by(user_id=user.id, status='For Sale').count()
-    }
-    
-    return render_template('profile.html', user=user, stats=user_stats)
-
 @views_bp.route('/orders')
 @login_required
 def orders_list():
