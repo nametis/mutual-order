@@ -509,6 +509,79 @@ function orderApp() {
             // Show chat on step 2 (validation) or after step 3 (ordered/delivered/closed)
             const stepIndex = this.statusSteps.findIndex(s => s.key === this.order.status);
             return stepIndex === 1 || stepIndex >= 3;
+        },
+
+        openAllDiscsInTabs() {
+            // Get all listings from all participants
+            const allListings = [...this.myListings, ...this.otherListings];
+            
+            if (allListings.length === 0) {
+                alert('Aucun disque trouvé dans cette commande');
+                return;
+            }
+
+            // Show confirmation dialog
+            const confirmed = confirm(`Voulez-vous ouvrir ${allListings.length} onglet${allListings.length > 1 ? 's' : ''} pour tous les disques de la commande ?\n\nNote: Votre navigateur pourrait bloquer les popups multiples.`);
+            
+            if (!confirmed) {
+                return;
+            }
+
+            // Try to open all tabs at once first
+            let openedCount = 0;
+            allListings.forEach((listing, index) => {
+                const newWindow = window.open(listing.listing_url, '_blank');
+                if (newWindow) {
+                    openedCount++;
+                }
+            });
+
+            // If only one tab opened (browser blocked others), try sequential approach
+            if (openedCount === 1 && allListings.length > 1) {
+                const continueSequential = confirm(`Seul 1 onglet a pu s'ouvrir automatiquement.\n\nVoulez-vous ouvrir les ${allListings.length - 1} autres onglets un par un ?\n\nCliquez sur "OK" pour chaque onglet.`);
+                
+                if (continueSequential) {
+                    this.openDiscsSequentially(allListings.slice(1));
+                }
+            } else {
+                // Show success message
+                const message = `Ouverture de ${openedCount} onglet${openedCount > 1 ? 's' : ''}...`;
+                this.flashMessage = message;
+                setTimeout(() => {
+                    this.flashMessage = '';
+                }, 3000);
+            }
+        },
+
+        openDiscsSequentially(listings) {
+            if (listings.length === 0) {
+                this.flashMessage = 'Tous les onglets ont été ouverts !';
+                setTimeout(() => {
+                    this.flashMessage = '';
+                }, 3000);
+                return;
+            }
+
+            const listing = listings[0];
+            const remaining = listings.slice(1);
+            
+            // Open current listing
+            window.open(listing.listing_url, '_blank');
+            
+            // Show progress and ask to continue
+            const continueNext = confirm(`Onglet ouvert pour: ${listing.title}\n\n${remaining.length} onglet${remaining.length > 1 ? 's' : ''} restant${remaining.length > 1 ? 's' : ''}.\n\nContinuer avec le suivant ?`);
+            
+            if (continueNext) {
+                // Continue with next listing after a short delay
+                setTimeout(() => {
+                    this.openDiscsSequentially(remaining);
+                }, 500);
+            } else {
+                this.flashMessage = `Ouverture interrompue. ${remaining.length} onglet${remaining.length > 1 ? 's' : ''} non ouvert${remaining.length > 1 ? 's' : ''}.`;
+                setTimeout(() => {
+                    this.flashMessage = '';
+                }, 3000);
+            }
         }
     };
 }

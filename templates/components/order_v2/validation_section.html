@@ -1,10 +1,17 @@
 <!-- Validation Phase -->
 <div x-show="order.status === 'validation'" class="bg-white rounded-lg shadow p-6 mt-6">
-    <div class="flex items-center justify-between mb-4">
+    <div class="flex flex-wrap items-baseline gap-2 sm:gap-4 mb-4">
         <h3 class="flex items-center space-x-2 text-xl font-bold text-gray-900">
             <span>⏳</span>
             <span>Validation de la commande</span>
         </h3>
+        
+        <!-- Open All Discs Button -->
+        <button @click="openAllDiscsInTabs()" 
+                class="flex items-center space-x-1 px-3 py-1 bg-white border border-black rounded-full text-black hover:bg-gray-50 text-xs transition-colors">
+            <span>🔗</span>
+            <span>Ouvrir un onglet pour chaque disque de la commande</span>
+        </button>
     </div>
 
     <!-- User validation for participants -->

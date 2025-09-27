@@ -41,6 +41,7 @@ def add_listing(order_id):
         # Create new listing
         listing = Listing(
             discogs_id=listing_data['id'],
+            release_id=listing_data.get('release_id'),
             title=listing_data['title'],
             price_value=listing_data['price_value'],
             currency=listing_data['currency'],

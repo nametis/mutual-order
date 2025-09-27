@@ -61,11 +61,18 @@ def initialize_extensions(app):
 def initialize_services(app):
     """Initialize application services"""
     try:
-        from services import cache_service, discogs_service
+        from services import cache_service, discogs_service, background_job_service
         
         # Initialize services within app context
         cache_service._setup_redis()
         discogs_service._setup_client()
+        
+        # Start background job scheduler (if enabled)
+        if app.config.get('ENABLE_BACKGROUND_JOBS', False):
+            background_job_service.start_scheduler()
+            app.logger.info("🕐 Background job scheduler started")
+        else:
+            app.logger.info("⏸️ Background jobs disabled - using on-demand incremental updates")
         
         app.logger.info("Services initialized successfully")
         

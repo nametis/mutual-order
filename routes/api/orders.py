@@ -19,9 +19,7 @@ def get_orders():
         user_listings_count = Listing.query.filter_by(order_id=order.id, user_id=user.id).count()
         available_count = order.listings.filter_by(status='For Sale').count()
 
-        print(f"DEBUG: Fetching seller info for {order.seller_name}")
         seller_info = discogs_service.fetch_seller_info(order.seller_name)
-        print(f"DEBUG: Got seller info: {seller_info}")
         
         order_data = order.to_dict()
         order_data.update({
@@ -294,10 +292,13 @@ def get_participant_summary(order_id):
         # Get all participants summary
         participants_summary = order.get_all_participants_summary()
         
-        # Convert to list format for frontend
+        # Convert to list format for frontend, sorted with creator first
         summary_list = []
         for participant_id, data in participants_summary.items():
             summary_list.append(data)
+        
+        # Sort with creator first, then by username
+        summary_list.sort(key=lambda x: (not x['user']['is_creator'], x['user']['username']))
         
         return jsonify(summary_list)
         

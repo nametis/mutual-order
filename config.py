@@ -19,13 +19,16 @@ class Config:
     DISCOGS_ACCESS_SECRET = os.getenv('DISCOGS_ACCESS_SECRET')
     
     # Rate limiting
-    DISCOGS_RATE_LIMIT_PER_MINUTE = 25
+    DISCOGS_RATE_LIMIT_PER_MINUTE = 50
+    
+    # Background jobs
+    ENABLE_BACKGROUND_JOBS = False  # Disabled - incremental updates handle this more efficiently
     
     # OAuth URLs
     DISCOGS_REQUEST_TOKEN_URL = 'https://api.discogs.com/oauth/request_token'
     DISCOGS_AUTHORIZE_URL = 'https://www.discogs.com/oauth/authorize'
     DISCOGS_ACCESS_TOKEN_URL = 'https://api.discogs.com/oauth/access_token'
-    DISCOGS_CALLBACK_URL = 'https://lomule.ddns.net/auth/discogs/callback'
+    DISCOGS_CALLBACK_URL = 'https://mutual-order.ddns.net/auth/discogs/callback'
     
     # User agent
     USER_AGENT = "MutualOrder/1.0"

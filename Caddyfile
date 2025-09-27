@@ -1,4 +1,4 @@
-lomule.ddns.net {
+mutual-order.ddns.net {
     reverse_proxy mutual-order_app_1:5001
     # Database admin - restrict to specific path
     #handle /admin__db {

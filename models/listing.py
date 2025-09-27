@@ -4,6 +4,7 @@ from . import db
 class Listing(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     discogs_id = db.Column(db.String(20), nullable=False, index=True)
+    release_id = db.Column(db.String(20), nullable=True, index=True)  # Discogs release ID
     title = db.Column(db.String(500), nullable=False)
     price_value = db.Column(db.Float, nullable=False)
     currency = db.Column(db.String(5), nullable=False)
@@ -26,6 +27,7 @@ class Listing(db.Model):
         return {
             'id': self.id,
             'discogs_id': self.discogs_id,
+            'release_id': self.release_id,
             'title': self.title,
             'price_value': self.price_value,
             'currency': self.currency,

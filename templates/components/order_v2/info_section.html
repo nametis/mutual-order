@@ -8,7 +8,9 @@
         <button @click.prevent="if(loadingFav) return; loadingFav = true; (hasFav ? fetch('/api/user/favorite_sellers/' + encodeURIComponent(order.seller_name), { method: 'DELETE' }) : fetch('/api/user/favorite_sellers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seller: order.seller_name }) })).then(r => { if(r.ok){ hasFav = !hasFav; } }).catch(()=>{}).finally(()=>{ loadingFav = false; })"
                 class="px-2 py-1 rounded-full border border-transparent hover:border-yellow-400 transition-colors"
                 :title="hasFav ? 'Déjà en favoris' : 'Ajouter aux favoris'">
-            <span x-text="hasFav ? '⭐' : '☆'"></span>
+            <span class="text-lg" 
+                  :class="hasFav ? 'text-yellow-500' : 'text-gray-400'"
+                  x-text="'⭐'"></span>
         </button>
         
         <h1 class="text-xl sm:text-2xl font-bold text-gray-900 min-w-0" x-text="order.seller_name"></h1>

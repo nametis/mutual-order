@@ -24,11 +24,18 @@
                     <h1 class="text-2xl font-bold text-gray-900">Mes Commandes</h1>
                     <p class="text-gray-600">Gérez vos commandes groupées</p>
                 </div>
-                <a href="/create_order_form" 
-                   class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
-                    <span>+</span>
-                    <span>Créer une nouvelle commande</span>
-                </a>
+                <div class="flex space-x-3">
+                    <a href="{{ url_for('views.profile', tab='friends') }}" 
+                       class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2">
+                        <span>+</span>
+                        <span>Ajouter un ami</span>
+                    </a>
+                    <a href="/create_order_form" 
+                       class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
+                        <span>+</span>
+                        <span>Créer une nouvelle commande</span>
+                    </a>
+                </div>
             </div>
 
             <!-- Main Tabs and Filters -->
@@ -155,6 +162,7 @@
             </template>
         </div>
     </div>
+
 
     <script>
     function dashboardApp() {

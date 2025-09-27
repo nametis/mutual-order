@@ -132,7 +132,10 @@ class Order(db.Model):
         """Summary for all participants"""
         participants_summary = {}
         
-        for participant in self.participants:
+        # Sort participants with creator first
+        sorted_participants = sorted(self.participants, key=lambda p: (p.id != self.creator_id, p.username))
+        
+        for participant in sorted_participants:
             participants_summary[participant.id] = {
                 'user': {
                     'id': participant.id,
@@ -172,14 +175,14 @@ class Order(db.Model):
             'seller_shop_url': self.seller_shop_url,
             'direct_url': self.direct_url,
             'participants_count': self.participants_count,
-            'participants': [
+            'participants': sorted([
                 {
                     'id': p.id, 
                     'username': p.username, 
                     'mutual_order_username': p.mutual_order_username,
                     'is_creator': p.id == self.creator_id
                 } for p in self.participants
-            ]
+            ], key=lambda x: (not x['is_creator'], x['username']))
         }
         
         if include_listings:

@@ -1,5 +1,5 @@
 from flask import Blueprint, request, redirect, render_template, url_for, flash, current_app
-from datetime import datetime
+from datetime import datetime, timezone
 from models import db, Order, Listing
 from services import auth_service, discogs_service
 
@@ -118,6 +118,7 @@ def create_order_form():
             # Create first listing
             listing = Listing(
                 discogs_id=listing_data['id'],
+                release_id=listing_data.get('release_id'),
                 title=listing_data['title'],
                 price_value=listing_data['price_value'],
                 currency=listing_data['currency'],
@@ -279,3 +280,9 @@ def settings():
     """User settings page"""
     user = auth_service.get_current_user()
     return render_template('user_settings.html', current_user=user)
+
+@views_bp.route('/debug/wantlist')
+@login_required
+def debug_wantlist():
+    """Debug page for wantlist matching"""
+    return render_template('debug_wantlist.html')
