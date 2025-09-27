@@ -43,6 +43,12 @@
                             <span x-show="!refreshing">🔄 Actualiser le cache</span>
                             <span x-show="refreshing">⏳ Actualisation...</span>
                         </button>
+                        <button @click="refreshCacheBypass()" 
+                                :disabled="refreshing"
+                                class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50">
+                            <span x-show="!refreshing">⚡ Actualiser sans cache</span>
+                            <span x-show="refreshing">⏳ Actualisation...</span>
+                        </button>
                         <button @click="clearCache()" 
                                 :disabled="clearing"
                                 class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">
@@ -375,6 +381,47 @@ function wantlistDebugApp() {
                 await this.init(); // Reload data
             } catch (error) {
                 console.error('Error refreshing cache:', error);
+                this.error = error.message;
+            } finally {
+                this.refreshing = false;
+            }
+        },
+        
+        async refreshCacheBypass() {
+            try {
+                this.refreshing = true;
+                this.error = null;
+                
+                // Load wantlist matches with bypass_cache=true
+                const matchesResponse = await fetch('/api/debug/wantlist-matches?bypass_cache=true');
+                const matchesData = await matchesResponse.json();
+                
+                if (!matchesResponse.ok) {
+                    throw new Error(matchesData.error || 'Erreur lors du chargement des données');
+                }
+                
+                this.results = matchesData;
+                
+                // Also reload cache status and job status
+                const [cacheResponse, jobResponse] = await Promise.all([
+                    fetch('/api/debug/cache-status'),
+                    fetch('/api/debug/job-status')
+                ]);
+                
+                const cacheData = await cacheResponse.json();
+                const jobData = await jobResponse.json();
+                
+                this.cacheStatus = cacheData.cache_status || [];
+                this.jobStatus = jobData;
+                
+                // Format last job run time
+                if (jobData.last_run && Object.keys(jobData.last_run).length > 0) {
+                    const lastRun = Object.values(jobData.last_run).sort().pop();
+                    this.lastJobRun = new Date(lastRun).toLocaleString('fr-FR');
+                }
+                
+            } catch (error) {
+                console.error('Error refreshing cache with bypass:', error);
                 this.error = error.message;
             } finally {
                 this.refreshing = false;

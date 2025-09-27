@@ -16,8 +16,11 @@ def get_wantlist_matches():
     
     user = auth_service.get_current_user()
     
+    # Check for bypass_cache parameter
+    bypass_cache = request.args.get('bypass_cache', 'false').lower() == 'true'
+    
     try:
-        results = wantlist_matching_service.get_wantlist_matches_for_user(user.id)
+        results = wantlist_matching_service.get_wantlist_matches_for_user(user.id, bypass_cache)
         return jsonify(results)
     except Exception as e:
         return jsonify({'error': str(e)}), 500

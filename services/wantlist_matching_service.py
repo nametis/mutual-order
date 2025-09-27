@@ -18,8 +18,7 @@ class WantlistMatchingService:
         self.inventory_cache_duration = 3600  # 1 hour for regular sellers
         self.large_seller_cache_duration = 7200  # 2 hours for large sellers (10k+ items)
     
-    @cache_result(expire_seconds=3600)  # 1 hour cache
-    def get_wantlist_matches_for_user(self, user_id):
+    def get_wantlist_matches_for_user(self, user_id, bypass_cache=False):
         """Get wantlist matches for a specific user across all sellers' inventories"""
         try:
             # Get user's Discogs credentials
@@ -53,7 +52,7 @@ class WantlistMatchingService:
             
             for order in open_orders:
                 # Process all sellers including large ones - incremental updates handle them efficiently
-                order_matches = self._find_matches_for_seller_inventory(order, wantlist, user)
+                order_matches = self._find_matches_for_seller_inventory(order, wantlist, user, bypass_cache)
                 if order_matches['total_matches'] > 0:
                     matches.append(order_matches)
             
@@ -72,7 +71,7 @@ class WantlistMatchingService:
                 'matches': []
             }
     
-    def _find_matches_for_seller_inventory(self, order, wantlist, user):
+    def _find_matches_for_seller_inventory(self, order, wantlist, user, bypass_cache=False):
         """Find wantlist matches for a seller's entire inventory"""
         try:
             current_app.logger.info(f"Checking seller {order.seller_name} inventory for wantlist matches")
@@ -82,7 +81,8 @@ class WantlistMatchingService:
                 order.seller_name,
                 user.id,
                 user.discogs_access_token,
-                user.discogs_access_secret
+                user.discogs_access_secret,
+                bypass_cache
             )
             
             if not seller_inventory:
@@ -308,7 +308,10 @@ class WantlistMatchingService:
             cached_at = datetime.fromisoformat(metadata['cached_at'])
             if cached_at.tzinfo is None:
                 cached_at = cached_at.replace(tzinfo=timezone.utc)
-            if datetime.now(timezone.utc) - cached_at > timedelta(seconds=cache_duration):
+            
+            # Ensure both datetimes are timezone-aware for comparison
+            now = datetime.now(timezone.utc)
+            if now - cached_at > timedelta(seconds=cache_duration):
                 return None, None
             
             # Get cached inventory
@@ -337,9 +340,39 @@ class WantlistMatchingService:
         except Exception as e:
             current_app.logger.error(f"Error caching inventory for {seller_name}: {e}")
     
-    def _get_incremental_seller_inventory(self, seller_name, user_id, access_token, access_secret):
+    def _get_incremental_seller_inventory(self, seller_name, user_id, access_token, access_secret, bypass_cache=False):
         """Get seller inventory with incremental updates - only fetch new/updated listings"""
         try:
+            # If bypass_cache is True, skip cache check and force fresh fetch
+            if bypass_cache:
+                current_app.logger.info(f"Bypassing cache for {seller_name}, fetching fresh inventory")
+                inventory = self.discogs_service.fetch_seller_inventory(seller_name, access_token, access_secret)
+                
+                if not inventory:
+                    return None, None
+                
+                # Find most recent listing date
+                most_recent_date = None
+                for item in inventory:
+                    if 'listed_date' in item and item['listed_date']:
+                        if not most_recent_date or item['listed_date'] > most_recent_date:
+                            most_recent_date = item['listed_date']
+                
+                # Create metadata
+                metadata = {
+                    'seller_name': seller_name,
+                    'count': len(inventory),
+                    'cached_at': datetime.now(timezone.utc).isoformat(),
+                    'last_updated': datetime.now(timezone.utc).isoformat(),
+                    'is_large_seller': self._is_large_seller(len(inventory)),
+                    'listing_ids': [item['id'] for item in inventory],
+                    'most_recent_listing_date': most_recent_date
+                }
+                
+                # Cache the results
+                self._cache_seller_inventory(seller_name, user_id, inventory, metadata)
+                return inventory, metadata
+            
             # First check if we have cached data
             cached_inventory, metadata = self._get_cached_seller_inventory(seller_name, user_id)
             
@@ -379,7 +412,9 @@ class WantlistMatchingService:
             if cached_at.tzinfo is None:
                 cached_at = cached_at.replace(tzinfo=timezone.utc)
             
-            if datetime.now(timezone.utc) - cached_at <= timedelta(seconds=cache_duration):
+            # Ensure both datetimes are timezone-aware for comparison
+            now = datetime.now(timezone.utc)
+            if now - cached_at <= timedelta(seconds=cache_duration):
                 current_app.logger.info(f"Using fresh cached inventory for {seller_name} ({len(cached_inventory)} items)")
                 return cached_inventory, metadata
             
@@ -502,7 +537,10 @@ class WantlistMatchingService:
             cached_at = datetime.fromisoformat(metadata['cached_at'])
             if cached_at.tzinfo is None:
                 cached_at = cached_at.replace(tzinfo=timezone.utc)
-            if datetime.now(timezone.utc) - cached_at > timedelta(seconds=cache_duration):
+            
+            # Ensure both datetimes are timezone-aware for comparison
+            now = datetime.now(timezone.utc)
+            if now - cached_at > timedelta(seconds=cache_duration):
                 return self.force_refresh_seller_inventory(seller_name, user_id, access_token, access_secret)
             
             # Cache is still fresh
