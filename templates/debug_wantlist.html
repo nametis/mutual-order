@@ -55,6 +55,12 @@
                             <span x-show="!clearing">🗑️ Vider le cache</span>
                             <span x-show="clearing">⏳ Suppression...</span>
                         </button>
+                        <button @click="clearWantlistCache()" 
+                                :disabled="clearingWantlist"
+                                class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50">
+                            <span x-show="!clearingWantlist">🧹 Vider cache wantlist</span>
+                            <span x-show="clearingWantlist">⏳ Suppression...</span>
+                        </button>
                     </div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -324,6 +330,7 @@ function wantlistDebugApp() {
         lastJobRun: null,
         refreshing: false,
         clearing: false,
+        clearingWantlist: false,
         refreshingFactoryUdine: false,
         loadingFactoryUdineDebug: false,
         factoryUdineDebug: null,
@@ -338,28 +345,63 @@ function wantlistDebugApp() {
             return this.cacheStatus.filter(seller => seller.is_cached).length;
         },
         
+        generateCacheStatusFromResults() {
+            // Generate cache status from wantlist matches results
+            if (!this.results || !this.results.registered_sellers) {
+                this.cacheStatus = [];
+                return;
+            }
+            
+            this.cacheStatus = this.results.registered_sellers.map(sellerName => {
+                // Check if this seller has matches (indicates cached data)
+                const hasMatches = this.results.matches && 
+                    this.results.matches.some(match => match.seller_name === sellerName);
+                
+                return {
+                    seller_name: sellerName,
+                    has_cached_inventory: hasMatches,
+                    cached_items_count: hasMatches ? 
+                        (this.results.matches.find(match => match.seller_name === sellerName)?.inventory_count || 0) : 0,
+                    is_large_seller: sellerName === 'FactoryUdine', // FactoryUdine is known to be large
+                    can_process: hasMatches && sellerName !== 'FactoryUdine',
+                    last_updated: hasMatches ? 'Recently' : null
+                };
+            });
+        },
+        
         async init() {
+            // Prevent multiple simultaneous init calls
+            if (this._initializing) {
+                console.log('🔄 Init already in progress, skipping...');
+                return;
+            }
+            
             try {
+                this._initializing = true;
                 this.loading = true;
                 this.error = null;
                 
-                // Load wantlist matches, cache status, and job status
-                const [matchesResponse, cacheResponse, jobResponse] = await Promise.all([
-                    fetch('/api/debug/wantlist-matches'),
-                    fetch('/api/debug/cache-status'),
-                    fetch('/api/debug/job-status')
-                ]);
+                console.log('🚀 Starting wantlist debug initialization...');
                 
+                // Load only wantlist matches and job status (skip cache status for now)
+                console.log('📊 Loading wantlist matches...');
+                const matchesResponse = await fetch('/api/debug/wantlist-matches');
                 const matchesData = await matchesResponse.json();
-                const cacheData = await cacheResponse.json();
-                const jobData = await jobResponse.json();
                 
                 if (!matchesResponse.ok) {
                     throw new Error(matchesData.error || 'Erreur lors du chargement des données');
                 }
                 
                 this.results = matchesData;
-                this.cacheStatus = cacheData.cache_status || [];
+                console.log('✅ Wantlist matches loaded');
+                
+                // Generate cache status from wantlist matches data
+                this.generateCacheStatusFromResults();
+                console.log('✅ Cache status generated from results');
+                
+                console.log('🕐 Loading job status...');
+                const jobResponse = await fetch('/api/debug/job-status');
+                const jobData = await jobResponse.json();
                 this.jobStatus = jobData;
                 
                 // Format last job run time
@@ -367,18 +409,29 @@ function wantlistDebugApp() {
                     const lastRun = Object.values(jobData.last_run).sort().pop();
                     this.lastJobRun = new Date(lastRun).toLocaleString('fr-FR');
                 }
+                console.log('✅ Job status loaded');
+                
+                console.log('🎉 Initialization complete!');
             } catch (error) {
                 console.error('Error loading wantlist matches:', error);
                 this.error = error.message;
             } finally {
                 this.loading = false;
+                this._initializing = false;
             }
         },
         
         async refreshCache() {
+            if (this.refreshing) {
+                console.log('🔄 Refresh already in progress, skipping...');
+                return;
+            }
+            
             try {
                 this.refreshing = true;
+                console.log('🔄 Refreshing cache...');
                 await this.init(); // Reload data
+                console.log('✅ Cache refresh complete');
             } catch (error) {
                 console.error('Error refreshing cache:', error);
                 this.error = error.message;
@@ -388,9 +441,16 @@ function wantlistDebugApp() {
         },
         
         async refreshCacheBypass() {
+            if (this.refreshing) {
+                console.log('🔄 Refresh already in progress, skipping...');
+                return;
+            }
+            
             try {
                 this.refreshing = true;
                 this.error = null;
+                
+                console.log('⚡ Refreshing cache with bypass...');
                 
                 // Load wantlist matches with bypass_cache=true
                 const matchesResponse = await fetch('/api/debug/wantlist-matches?bypass_cache=true');
@@ -401,17 +461,15 @@ function wantlistDebugApp() {
                 }
                 
                 this.results = matchesData;
+                console.log('✅ Wantlist matches loaded (bypass)');
                 
-                // Also reload cache status and job status
-                const [cacheResponse, jobResponse] = await Promise.all([
-                    fetch('/api/debug/cache-status'),
-                    fetch('/api/debug/job-status')
-                ]);
+                // Generate cache status from results
+                this.generateCacheStatusFromResults();
+                console.log('✅ Cache status generated from results');
                 
-                const cacheData = await cacheResponse.json();
+                console.log('🕐 Loading job status...');
+                const jobResponse = await fetch('/api/debug/job-status');
                 const jobData = await jobResponse.json();
-                
-                this.cacheStatus = cacheData.cache_status || [];
                 this.jobStatus = jobData;
                 
                 // Format last job run time
@@ -419,6 +477,7 @@ function wantlistDebugApp() {
                     const lastRun = Object.values(jobData.last_run).sort().pop();
                     this.lastJobRun = new Date(lastRun).toLocaleString('fr-FR');
                 }
+                console.log('✅ Cache bypass refresh complete');
                 
             } catch (error) {
                 console.error('Error refreshing cache with bypass:', error);
@@ -447,6 +506,32 @@ function wantlistDebugApp() {
                 this.error = error.message;
             } finally {
                 this.clearing = false;
+            }
+        },
+        
+        async clearWantlistCache() {
+            try {
+                this.clearingWantlist = true;
+                console.log('🧹 Clearing wantlist cache...');
+                
+                const response = await fetch('/api/debug/clear-wantlist-cache', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Erreur lors de la suppression du cache wantlist');
+                }
+                
+                console.log('✅ Wantlist cache cleared:', data.message);
+                
+                // Reload data after clearing cache
+                await this.init();
+            } catch (error) {
+                console.error('Error clearing wantlist cache:', error);
+                this.error = error.message;
+            } finally {
+                this.clearingWantlist = false;
             }
         },
         

@@ -19,8 +19,16 @@ class WantlistMatchingService:
         self.large_seller_cache_duration = 7200  # 2 hours for large sellers (10k+ items)
     
     def get_wantlist_matches_for_user(self, user_id, bypass_cache=False):
-        """Get wantlist matches for a specific user across all sellers' inventories"""
+        """Get wantlist matches for a specific user across all registered sellers' inventories"""
         try:
+            # Check if we have a cached result for this user (unless bypassing cache)
+            if not bypass_cache:
+                cache_key = f"wantlist_matches_full_{user_id}"
+                cached_result = cache_service.get(cache_key)
+                if cached_result:
+                    current_app.logger.info(f"✅ CACHE HIT for full wantlist matches (user {user_id})")
+                    return json.loads(cached_result)
+            
             # Get user's Discogs credentials
             user = User.query.get(user_id)
             if not user or not user.discogs_access_token or not user.discogs_access_secret:
@@ -43,32 +51,199 @@ class WantlistMatchingService:
                     'matches': []
                 }
             
-            # Get all open orders (building or validation status)
-            open_orders = Order.query.filter(
-                Order.status.in_(['building', 'validation'])
-            ).all()
+            # Get all registered sellers (from orders and favorite sellers)
+            registered_sellers = self.get_all_registered_sellers()
+            
+            if not registered_sellers:
+                return {
+                    'user_id': user_id,
+                    'username': user.username,
+                    'wantlist_count': len(wantlist),
+                    'sellers_checked': 0,
+                    'matches': [],
+                    'message': 'No registered sellers found'
+                }
             
             matches = []
+            processed_sellers = set()  # Prevent duplicate processing
             
-            for order in open_orders:
-                # Process all sellers including large ones - incremental updates handle them efficiently
-                order_matches = self._find_matches_for_seller_inventory(order, wantlist, user, bypass_cache)
-                if order_matches['total_matches'] > 0:
-                    matches.append(order_matches)
+            for seller_name in registered_sellers:
+                if seller_name in processed_sellers:
+                    continue
+                    
+                processed_sellers.add(seller_name)
+                
+                # Check if seller is too large for API (skip if >100 pages)
+                try:
+                    oauth = self.discogs_service.get_oauth_session(
+                        user.discogs_access_token, user.discogs_access_secret
+                    )
+                    response = oauth.get(
+                        f'https://api.discogs.com/users/{seller_name}/inventory',
+                        params={'page': 1, 'per_page': 100}
+                    )
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        pagination = data.get('pagination', {})
+                        total_pages = pagination.get('pages', 0)
+                        total_items = pagination.get('items', 0)
+                        
+                        if total_pages > 100:
+                            current_app.logger.info(f"Skipping {seller_name} - Large Seller ({total_pages} pages, {total_items} items)")
+                            continue
+                    else:
+                        current_app.logger.warning(f"Could not check {seller_name} - API error {response.status_code}")
+                        continue
+                        
+                except Exception as e:
+                    current_app.logger.warning(f"Could not check {seller_name} - {e}")
+                    continue
+                
+                # Process seller inventory
+                seller_matches = self._find_matches_for_seller_name(seller_name, wantlist, user, bypass_cache)
+                if seller_matches['total_matches'] > 0:
+                    matches.append(seller_matches)
             
-            return {
+            result = {
                 'user_id': user_id,
                 'username': user.username,
                 'wantlist_count': len(wantlist),
-                'orders_checked': len(open_orders),
+                'sellers_checked': len(processed_sellers),
+                'registered_sellers': registered_sellers,
                 'matches': matches
             }
+            
+            # Cache the full result for 10 minutes (unless bypassing cache)
+            if not bypass_cache:
+                cache_key = f"wantlist_matches_full_{user_id}"
+                cache_service.set(cache_key, json.dumps(result), expire_seconds=600)
+                current_app.logger.info(f"💾 Cached full wantlist matches for user {user_id}")
+            
+            return result
             
         except Exception as e:
             current_app.logger.error(f"Error getting wantlist matches: {e}")
             return {
                 'error': str(e),
                 'matches': []
+            }
+    
+    def _find_matches_for_seller_name(self, seller_name, wantlist, user, bypass_cache=False):
+        """Find wantlist matches for a seller's entire inventory by seller name"""
+        try:
+            current_app.logger.info(f"Checking seller {seller_name} inventory for wantlist matches")
+            
+            # Get seller's inventory (cached or fresh)
+            seller_inventory, metadata = self._get_incremental_seller_inventory(
+                seller_name,
+                user.id,
+                user.discogs_access_token,
+                user.discogs_access_secret,
+                bypass_cache
+            )
+            
+            if not seller_inventory:
+                current_app.logger.warning(f"No inventory found for seller {seller_name}")
+                return {
+                    'seller_name': seller_name,
+                    'total_matches': 0,
+                    'inventory_count': 0,
+                    'matches': [],
+                    'cache_info': {
+                        'is_cached': metadata is not None,
+                        'is_large_seller': metadata.get('is_large_seller', False) if metadata else False,
+                        'last_updated': metadata.get('last_updated') if metadata else None
+                    }
+                }
+            
+            current_app.logger.info(f"Found {len(seller_inventory)} items in {seller_name}'s inventory")
+            
+            # Match inventory against wantlist with optimized algorithm
+            matches = []
+            total_matches = 0
+            
+            # Create a set of wantlist release IDs for fast lookup
+            wantlist_release_ids = set()
+            for wantlist_item in wantlist:
+                release_id = wantlist_item.get('release_id')
+                if release_id:
+                    wantlist_release_ids.add(str(release_id))
+            
+            # Process inventory items
+            for item in seller_inventory:
+                item_release_id = str(item.get('release_id', ''))
+                
+                # Fast path: exact release ID match
+                if item_release_id and item_release_id in wantlist_release_ids:
+                    # Find the matching wantlist item
+                    for wantlist_item in wantlist:
+                        if str(wantlist_item.get('release_id', '')) == item_release_id:
+                            matches.append({
+                                'listing_id': item.get('id'),
+                                'release_id': item.get('release_id'),
+                                'title': item.get('title'),
+                                'artist': item.get('artist', 'Unknown'),
+                                'price_value': item.get('price_value'),
+                                'currency': item.get('currency'),
+                                'media_condition': item.get('media_condition'),
+                                'sleeve_condition': item.get('sleeve_condition'),
+                                'listing_url': item.get('listing_url'),
+                                'status': item.get('status'),
+                                'wantlist_item': {
+                                    'id': wantlist_item.get('id'),
+                                    'title': wantlist_item.get('title'),
+                                    'artist': wantlist_item.get('artist')
+                                }
+                            })
+                            total_matches += 1
+                            break
+                else:
+                    # Slow path: fuzzy matching only if no release ID match
+                    for wantlist_item in wantlist:
+                        if self._is_match(item, wantlist_item):
+                            matches.append({
+                                'listing_id': item.get('id'),
+                                'release_id': item.get('release_id'),
+                                'title': item.get('title'),
+                                'artist': item.get('artist', 'Unknown'),
+                                'price_value': item.get('price_value'),
+                                'currency': item.get('currency'),
+                                'media_condition': item.get('media_condition'),
+                                'sleeve_condition': item.get('sleeve_condition'),
+                                'listing_url': item.get('listing_url'),
+                                'status': item.get('status'),
+                                'wantlist_item': {
+                                    'id': wantlist_item.get('id'),
+                                    'title': wantlist_item.get('title'),
+                                    'artist': wantlist_item.get('artist')
+                                }
+                            })
+                            total_matches += 1
+                            break  # Found a match, move to next inventory item
+            
+            current_app.logger.info(f"Seller {seller_name}: {total_matches} matches out of {len(seller_inventory)} inventory items")
+            
+            return {
+                'seller_name': seller_name,
+                'total_matches': total_matches,
+                'inventory_count': len(seller_inventory),
+                'matches': matches,
+                'cache_info': {
+                    'is_cached': metadata is not None,
+                    'is_large_seller': metadata.get('is_large_seller', False) if metadata else False,
+                    'last_updated': metadata.get('last_updated') if metadata else None
+                }
+            }
+            
+        except Exception as e:
+            current_app.logger.error(f"Error finding matches for seller {seller_name}: {e}")
+            return {
+                'seller_name': seller_name,
+                'total_matches': 0,
+                'inventory_count': 0,
+                'matches': [],
+                'error': str(e)
             }
     
     def _find_matches_for_seller_inventory(self, order, wantlist, user, bypass_cache=False):
@@ -250,6 +425,35 @@ class WantlistMatchingService:
         
         return similarity >= 0.5  # 50% similarity threshold
     
+    def _is_similar_title(self, title1, title2):
+        """Check if two titles are similar using fuzzy matching"""
+        if not title1 or not title2:
+            return False
+        
+        # Normalize titles
+        title1 = title1.lower().strip()
+        title2 = title2.lower().strip()
+        
+        # Exact match
+        if title1 == title2:
+            return True
+        
+        # Check if one is contained in the other (for variations)
+        if title1 in title2 or title2 in title1:
+            return True
+        
+        # Check word overlap
+        words1 = set(title1.split())
+        words2 = set(title2.split())
+        
+        if not words1 or not words2:
+            return False
+        
+        overlap = len(words1.intersection(words2))
+        similarity = overlap / max(len(words1), len(words2))
+        
+        return similarity >= 0.7  # 70% similarity threshold for titles
+    
     def _extract_artist_from_title(self, title):
         """Try to extract artist name from listing title (common pattern: 'Artist - Title')"""
         import re
@@ -290,15 +494,51 @@ class WantlistMatchingService:
         """Check if seller has large inventory (10k+ items)"""
         return inventory_count >= 10000
     
+    def _is_seller_too_large_for_api(self, total_pages):
+        """Check if seller exceeds Discogs API pagination limit (100 pages)"""
+        return total_pages > 100
+    
+    def _is_match(self, inventory_item, wantlist_item):
+        """Check if an inventory item matches a wantlist item"""
+        try:
+            # First try exact release ID match
+            inventory_release_id = str(inventory_item.get('release_id', ''))
+            wantlist_release_id = str(wantlist_item.get('release_id', ''))
+            
+            if inventory_release_id and wantlist_release_id and inventory_release_id == wantlist_release_id:
+                return True
+            
+            # If no release IDs, try title and artist matching
+            inventory_title = inventory_item.get('title', '').lower().strip()
+            inventory_artist = inventory_item.get('artist', '').lower().strip()
+            wantlist_title = wantlist_item.get('title', '').lower().strip()
+            wantlist_artist = wantlist_item.get('artist', '').lower().strip()
+            
+            # Check if titles are similar
+            if inventory_title and wantlist_title:
+                if self._is_similar_title(inventory_title, wantlist_title):
+                    # If artists match or are similar, it's a match
+                    if not inventory_artist or not wantlist_artist or self._is_similar_artist(inventory_artist, wantlist_artist):
+                        return True
+            
+            return False
+            
+        except Exception as e:
+            current_app.logger.warning(f"Error in _is_match: {e}")
+            return False
+    
     def _get_cached_seller_inventory(self, seller_name, user_id):
         """Get cached seller inventory if available and not expired"""
         try:
             cache_key = self._get_seller_inventory_cache_key(seller_name, user_id)
             metadata_key = self._get_seller_inventory_metadata_key(seller_name)
             
+            current_app.logger.info(f"🔍 Checking cache for {seller_name} - cache_key: {cache_key}, metadata_key: {metadata_key}")
+            
             # Check metadata first
             metadata = cache_service.get(metadata_key)
             if not metadata:
+                current_app.logger.info(f"❌ No metadata found for {seller_name}")
                 return None, None
             
             metadata = json.loads(metadata)
@@ -378,7 +618,7 @@ class WantlistMatchingService:
             
             if not cached_inventory or not metadata:
                 # No cache - do full fetch
-                current_app.logger.info(f"No cache found for {seller_name}, fetching full inventory")
+                current_app.logger.info(f"🔍 CACHE MISS for {seller_name} - fetching full inventory")
                 inventory = self.discogs_service.fetch_seller_inventory(seller_name, access_token, access_secret)
                 
                 if not inventory:
@@ -415,7 +655,7 @@ class WantlistMatchingService:
             # Ensure both datetimes are timezone-aware for comparison
             now = datetime.now(timezone.utc)
             if now - cached_at <= timedelta(seconds=cache_duration):
-                current_app.logger.info(f"Using fresh cached inventory for {seller_name} ({len(cached_inventory)} items)")
+                current_app.logger.info(f"✅ CACHE HIT for {seller_name} ({len(cached_inventory)} items) - using cached data")
                 return cached_inventory, metadata
             
             # Cache is stale - use smart incremental approach
@@ -549,6 +789,89 @@ class WantlistMatchingService:
         except Exception as e:
             current_app.logger.error(f"Error in background refresh for {seller_name}: {e}")
             return None, None
+    
+    def get_all_registered_sellers(self):
+        """Get all unique sellers from orders and favorite sellers with caching"""
+        try:
+            # Check cache first (5 minute cache)
+            cache_key = "registered_sellers_list"
+            cached_sellers = cache_service.get(cache_key)
+            if cached_sellers:
+                sellers = json.loads(cached_sellers)
+                current_app.logger.info(f"✅ CACHE HIT for registered sellers ({len(sellers)} sellers)")
+                return sellers
+            
+            from models.order import Order
+            from models.favorite_seller import FavoriteSeller
+            from models import db
+            
+            # Get sellers from orders
+            order_sellers = db.session.query(Order.seller_name).distinct().all()
+            order_seller_names = [seller[0] for seller in order_sellers if seller[0]]
+            
+            # Get sellers from favorite sellers
+            favorite_sellers = db.session.query(FavoriteSeller.seller_name).distinct().all()
+            favorite_seller_names = [seller[0] for seller in favorite_sellers if seller[0]]
+            
+            # Combine and deduplicate
+            all_sellers = list(set(order_seller_names + favorite_seller_names))
+            
+            # Cache the result for 5 minutes
+            cache_service.set(cache_key, json.dumps(all_sellers), expire_seconds=300)
+            
+            current_app.logger.info(f"Found {len(all_sellers)} registered sellers: {all_sellers}")
+            return all_sellers
+            
+        except Exception as e:
+            current_app.logger.error(f"Error getting registered sellers: {e}")
+            return []
+    
+    def refresh_all_registered_sellers(self, user_id, access_token, access_secret):
+        """Refresh inventory for all registered sellers"""
+        try:
+            current_app.logger.info("🔄 Starting refresh for all registered sellers")
+            
+            sellers = self.get_all_registered_sellers()
+            if not sellers:
+                current_app.logger.info("No registered sellers found")
+                return
+            
+            refreshed_count = 0
+            large_sellers = []
+            
+            for seller_name in sellers:
+                try:
+                    current_app.logger.info(f"Processing seller: {seller_name}")
+                    
+                    # Check if seller is too large for API
+                    # We'll check this during the actual fetch
+                    inventory, metadata = self.force_refresh_seller_inventory(
+                        seller_name, user_id, access_token, access_secret
+                    )
+                    
+                    if inventory is not None:
+                        if len(inventory) == 0 and metadata and metadata.get('is_large_seller', False):
+                            large_sellers.append(seller_name)
+                            current_app.logger.info(f"✅ {seller_name} classified as Large Seller (API limit exceeded)")
+                        else:
+                            refreshed_count += 1
+                            current_app.logger.info(f"✅ Refreshed {seller_name}: {len(inventory)} items")
+                    else:
+                        current_app.logger.warning(f"❌ Failed to refresh {seller_name}")
+                    
+                    # Rate limiting
+                    time.sleep(1)
+                    
+                except Exception as e:
+                    current_app.logger.error(f"Error processing seller {seller_name}: {e}")
+                    continue
+            
+            current_app.logger.info(f"🎉 Refresh complete: {refreshed_count} sellers refreshed, {len(large_sellers)} large sellers")
+            if large_sellers:
+                current_app.logger.info(f"Large sellers (API limit exceeded): {large_sellers}")
+            
+        except Exception as e:
+            current_app.logger.error(f"Error in refresh_all_registered_sellers: {e}")
 
 # Global service instance
 wantlist_matching_service = WantlistMatchingService()

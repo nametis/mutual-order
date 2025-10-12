@@ -7,7 +7,7 @@ from .cache_service import cache_result
 
 class DiscogsRateLimit:
     """Rate limiting for Discogs API"""
-    def __init__(self, max_calls_per_minute=50):
+    def __init__(self, max_calls_per_minute=60):
         self.calls = 0
         self.reset_time = time.time() + 60
         self.max_calls_per_minute = max_calls_per_minute
@@ -275,10 +275,50 @@ class DiscogsService:
         try:
             oauth = self.get_oauth_session(access_token, access_token_secret)
             
+            # First, check pagination info to see if seller is too large
+            response = oauth.get(
+                f'https://api.discogs.com/users/{seller_name}/inventory',
+                params={'page': 1, 'per_page': 100}
+            )
+            
+            if response.status_code != 200:
+                current_app.logger.error(f"Failed to get pagination info for {seller_name}: {response.status_code}")
+                return []
+            
+            data = response.json()
+            pagination = data.get('pagination', {})
+            total_pages = pagination.get('pages', 1)
+            total_items = pagination.get('items', 0)
+            
+            # Check if seller is too large (Discogs API limitation: pagination above 100 pages disabled)
+            if total_pages > 100:
+                current_app.logger.warning(f"Seller {seller_name} has {total_pages} pages ({total_items} items) - exceeds Discogs API limit of 100 pages")
+                current_app.logger.info(f"Classifying {seller_name} as 'Large Seller' - inventory fetching disabled")
+                return []
+            
             inventory = []
             page = 1
             per_page = 100
             
+            # Process the first page we already fetched
+            listings = data.get('listings', [])
+            if listings:
+                for listing in listings:
+                    release = listing.get('release', {})
+                    inventory.append({
+                        'id': str(listing.get('id')),
+                        'release_id': str(release.get('id')) if release.get('id') else None,
+                        'title': release.get('title', 'Unknown'),
+                        'price_value': float(listing.get('price', {}).get('value', 0)),
+                        'currency': listing.get('price', {}).get('currency', 'USD'),
+                        'media_condition': listing.get('condition', 'Unknown'),
+                        'sleeve_condition': listing.get('sleeve_condition', 'Unknown'),
+                        'listing_url': f"https://www.discogs.com/sell/item/{listing.get('id')}",
+                        'status': listing.get('status', 'For Sale')
+                    })
+            
+            # Continue with remaining pages
+            page = 2
             while True:
                 response = oauth.get(
                     f'https://api.discogs.com/users/{seller_name}/inventory',
@@ -420,7 +460,7 @@ class DiscogsService:
                 
                 # Rate limiting between batches
                 if i + batch_size < len(listing_ids):
-                    time.sleep(0.1)  # Small delay between batches
+                    time.sleep(1.0)  # 1 second delay to respect Discogs 60/min rate limit between batches
             
             current_app.logger.info(f"Fetched details for {len(detailed_listings)} listings")
             return detailed_listings
@@ -540,6 +580,19 @@ class DiscogsService:
             
             current_app.logger.info(f"Total items: {total_items}, Total pages: {total_pages}")
             
+            # Check if seller is too large (Discogs API limitation: pagination above 100 pages disabled)
+            if total_pages > 100:
+                current_app.logger.warning(f"Seller {seller_name} has {total_pages} pages ({total_items} items) - exceeds Discogs API limit of 100 pages")
+                current_app.logger.info(f"Classifying {seller_name} as 'Large Seller' - inventory fetching disabled")
+                
+                # Return cached inventory if available, otherwise empty with special metadata
+                if cached_inventory:
+                    current_app.logger.info(f"Returning cached inventory for large seller: {len(cached_inventory)} items")
+                    return cached_inventory, cached_inventory[:20]
+                else:
+                    current_app.logger.info(f"No cached inventory for large seller {seller_name}")
+                    return [], []
+            
             # If we have cached data, check how many we have vs total
             if cached_inventory:
                 cached_count = len(cached_inventory)
@@ -565,82 +618,133 @@ class DiscogsService:
             return cached_inventory if cached_inventory else [], []
     
     def _fetch_missing_items_from_end_pages(self, oauth, seller_name, total_pages, cached_inventory, missing_count):
-        """Fetch missing items using the same logic as main fetch_seller_inventory"""
-        current_app.logger.info(f"Fetching missing {missing_count} items using main inventory logic")
+        """Fetch missing items from the end pages where they should be located"""
+        current_app.logger.info(f"Fetching missing {missing_count} items from end pages")
         
         # Get cached item IDs for deduplication
         cached_ids = set(item['id'] for item in cached_inventory)
         
-        # Use the same logic as fetch_seller_inventory but with deduplication
         new_items = []
-        page = 1
         per_page = 100
         
-        while True:
-            current_app.logger.info(f"Fetching page {page} for missing items")
+        # Calculate which pages to fetch based on missing count
+        # Strategy: Try the last few pages where missing items might be located
+        pages_to_fetch = []
+        
+        if missing_count > 0:
+            # Try the last few pages to find missing items
+            # Start from a few pages before the end to be safe
+            start_page = max(1, total_pages - 2)  # Start from 2 pages before the end
+            end_page = total_pages
             
+            # Create page ranges: try last few pages individually
+            for page in range(start_page, end_page + 1):
+                pages_to_fetch.append((page, page))  # Single page per batch for missing items
+        
+        current_app.logger.info(f"Will fetch pages in batches: {pages_to_fetch}")
+        
+        for batch_start, batch_end in pages_to_fetch:
+            current_app.logger.info(f"Fetching pages {batch_start}-{batch_end} for missing items")
+            
+            # Fetch this batch of pages
+            for page in range(batch_start, batch_end + 1):
+                try:
+                    response = oauth.get(
+                        f'https://api.discogs.com/users/{seller_name}/inventory',
+                        params={'page': page, 'per_page': per_page}
+                    )
+                    
+                    if response.status_code == 403:
+                        current_app.logger.warning(f"Page {page} not accessible (403) - might not exist, skipping")
+                        continue
+                    elif response.status_code != 200:
+                        current_app.logger.warning(f"Failed to fetch page {page}: {response.status_code}")
+                        continue
+                    
+                    data = response.json()
+                    listings = data.get('listings', [])
+                    
+                    if not listings:
+                        current_app.logger.info(f"No more listings at page {page}")
+                        break
+                    
+                    # Process listings and filter out cached items
+                    for listing in listings:
+                        listing_id = str(listing.get('id'))
+                        if listing_id not in cached_ids:
+                            release = listing.get('release', {})
+                            processed_item = {
+                                'id': listing_id,
+                                'release_id': str(release.get('id')) if release.get('id') else None,
+                                'title': release.get('title', 'Unknown'),
+                                'price_value': float(listing.get('price', {}).get('value', 0)),
+                                'currency': listing.get('price', {}).get('currency', 'USD'),
+                                'media_condition': listing.get('condition', 'Unknown'),
+                                'sleeve_condition': listing.get('sleeve_condition', 'Unknown'),
+                                'listing_url': f"https://www.discogs.com/sell/item/{listing_id}",
+                                'status': listing.get('status', 'For Sale'),
+                                'listed_date': listing.get('listed', '')
+                            }
+                            new_items.append(processed_item)
+                    
+                    # Check if we got fewer listings than expected (end of inventory)
+                    if len(listings) < per_page:
+                        current_app.logger.info(f"Reached end of inventory at page {page} (got {len(listings)} items)")
+                        break
+                    
+                    # Stop if we found enough missing items
+                    if len(new_items) >= missing_count:
+                        current_app.logger.info(f"Found {len(new_items)} missing items, stopping")
+                        break
+                    
+                    time.sleep(1.0)  # 1 second delay to respect Discogs 60/min rate limit
+                    
+                except Exception as e:
+                    current_app.logger.warning(f"Error fetching page {page}: {e}")
+                    continue
+            
+            # Stop if we found enough missing items
+            if len(new_items) >= missing_count:
+                break
+        
+        # If we didn't find any new items and we're still missing items, try a different approach
+        if len(new_items) == 0 and missing_count > 0:
+            current_app.logger.info("No new items found, trying to refetch last page with larger per_page")
+            
+            # Try to refetch the last page with a larger per_page to get more items
             try:
                 response = oauth.get(
                     f'https://api.discogs.com/users/{seller_name}/inventory',
-                    params={'page': page, 'per_page': per_page}
+                    params={'page': total_pages, 'per_page': 200}  # Try larger page size
                 )
                 
-                if response.status_code != 200:
-                    current_app.logger.warning(f"Failed to fetch page {page}: {response.status_code}")
-                    break
-                
-                data = response.json()
-                listings = data.get('listings', [])
-                
-                if not listings:
-                    current_app.logger.info(f"No more listings found at page {page}")
-                    break
-                
-                # Process listings and check for new items
-                for listing in listings:
-                    listing_id = str(listing.get('id'))
-                    if listing_id not in cached_ids:
-                        release = listing.get('release', {})
-                        processed_item = {
-                            'id': listing_id,
-                            'release_id': str(release.get('id')) if release.get('id') else None,
-                            'title': release.get('title', 'Unknown'),
-                            'price_value': float(listing.get('price', {}).get('value', 0)),
-                            'currency': listing.get('price', {}).get('currency', 'USD'),
-                            'media_condition': listing.get('condition', 'Unknown'),
-                            'sleeve_condition': listing.get('sleeve_condition', 'Unknown'),
-                            'listing_url': f"https://www.discogs.com/sell/item/{listing_id}",
-                            'status': listing.get('status', 'For Sale'),
-                            'listed_date': listing.get('listed', '')
-                        }
-                        new_items.append(processed_item)
-                        
-                        # Stop if we found enough missing items
-                        if len(new_items) >= missing_count:
-                            current_app.logger.info(f"Found {len(new_items)} missing items, stopping")
-                            break
-                
-                # Check if we got fewer listings than expected (end of inventory)
-                if len(listings) < per_page:
-                    current_app.logger.info(f"Reached end of inventory at page {page} (got {len(listings)} items)")
-                    break
-                
-                # Stop if we found enough missing items
-                if len(new_items) >= missing_count:
-                    break
-                
-                page += 1
-                
-                # Safety check for very large inventories
-                if page > 200:  # 200 pages = 20,000 items max
-                    current_app.logger.warning(f"Reached safety limit of 200 pages")
-                    break
-                
-                time.sleep(0.1)  # Small delay
-                
+                if response.status_code == 200:
+                    data = response.json()
+                    listings = data.get('listings', [])
+                    
+                    # Process any additional listings we might have missed
+                    for listing in listings:
+                        listing_id = str(listing.get('id'))
+                        if listing_id not in cached_ids:
+                            release = listing.get('release', {})
+                            processed_item = {
+                                'id': listing_id,
+                                'release_id': str(release.get('id')) if release.get('id') else None,
+                                'title': release.get('title', 'Unknown'),
+                                'price_value': float(listing.get('price', {}).get('value', 0)),
+                                'currency': listing.get('price', {}).get('currency', 'USD'),
+                                'media_condition': listing.get('condition', 'Unknown'),
+                                'sleeve_condition': listing.get('sleeve_condition', 'Unknown'),
+                                'listing_url': f"https://www.discogs.com/sell/item/{listing_id}",
+                                'status': listing.get('status', 'For Sale'),
+                                'listed_date': listing.get('listed', '')
+                            }
+                            new_items.append(processed_item)
+                    
+                    current_app.logger.info(f"Found {len(new_items)} additional items with larger per_page")
+                    
             except Exception as e:
-                current_app.logger.warning(f"Error fetching page {page}: {e}")
-                break
+                current_app.logger.warning(f"Error trying larger per_page: {e}")
         
         # Combine cached items with new items
         complete_inventory = cached_inventory + new_items
@@ -650,55 +754,65 @@ class DiscogsService:
         return complete_inventory, complete_inventory[:20]
     
     def _fetch_all_items_via_pagination(self, oauth, seller_name, total_pages, total_items):
-        """Fetch all items via pagination (fallback when no cache)"""
-        current_app.logger.info(f"Fetching all {total_items} items via pagination")
+        """Fetch all items via pagination using efficient batching (fallback when no cache)"""
+        current_app.logger.info(f"Fetching all {total_items} items via pagination with efficient batching")
         
         all_items = []
         failed_pages = []
+        per_page = 100
         
-        for page in range(1, min(total_pages + 1, 200)):  # Safety limit
-            try:
-                current_app.logger.info(f"Fetching page {page}/{total_pages}")
-                
-                response = oauth.get(
-                    f'https://api.discogs.com/users/{seller_name}/inventory',
-                    params={'page': page, 'per_page': 100}
-                )
-                
-                if response.status_code == 502:
-                    current_app.logger.warning(f"502 error on page {page}, retrying...")
-                    time.sleep(2)
-                    continue
-                elif response.status_code != 200:
-                    current_app.logger.warning(f"Failed page {page}: {response.status_code}")
+        # Create efficient page ranges: 50 pages per batch
+        pages_to_fetch = []
+        for batch_start in range(1, total_pages + 1, 50):
+            batch_end = min(batch_start + 49, total_pages)
+            pages_to_fetch.append((batch_start, batch_end))
+        
+        current_app.logger.info(f"Will fetch pages in batches: {pages_to_fetch}")
+        
+        for batch_start, batch_end in pages_to_fetch:
+            current_app.logger.info(f"Fetching pages {batch_start}-{batch_end}/{total_pages}")
+            
+            for page in range(batch_start, batch_end + 1):
+                try:
+                    response = oauth.get(
+                        f'https://api.discogs.com/users/{seller_name}/inventory',
+                        params={'page': page, 'per_page': per_page}
+                    )
+                    
+                    if response.status_code == 502:
+                        current_app.logger.warning(f"502 error on page {page}, retrying...")
+                        time.sleep(2)
+                        continue
+                    elif response.status_code != 200:
+                        current_app.logger.warning(f"Failed page {page}: {response.status_code}")
+                        failed_pages.append(page)
+                        continue
+                    
+                    data = response.json()
+                    listings = data.get('listings', [])
+                    
+                    for listing in listings:
+                        release = listing.get('release', {})
+                        processed_item = {
+                            'id': str(listing.get('id')),
+                            'release_id': str(release.get('id')) if release.get('id') else None,
+                            'title': release.get('title', 'Unknown'),
+                            'price_value': float(listing.get('price', {}).get('value', 0)),
+                            'currency': listing.get('price', {}).get('currency', 'USD'),
+                            'media_condition': listing.get('condition', 'Unknown'),
+                            'sleeve_condition': listing.get('sleeve_condition', 'Unknown'),
+                            'listing_url': f"https://www.discogs.com/sell/item/{listing.get('id')}",
+                            'status': listing.get('status', 'For Sale'),
+                            'listed_date': listing.get('listed', '')
+                        }
+                        all_items.append(processed_item)
+                    
+                    time.sleep(1.0)  # 1 second delay to respect Discogs 60/min rate limit
+                    
+                except Exception as e:
+                    current_app.logger.warning(f"Error on page {page}: {e}")
                     failed_pages.append(page)
                     continue
-                
-                data = response.json()
-                listings = data.get('listings', [])
-                
-                for listing in listings:
-                    release = listing.get('release', {})
-                    processed_item = {
-                        'id': str(listing.get('id')),
-                        'release_id': str(release.get('id')) if release.get('id') else None,
-                        'title': release.get('title', 'Unknown'),
-                        'price_value': float(listing.get('price', {}).get('value', 0)),
-                        'currency': listing.get('price', {}).get('currency', 'USD'),
-                        'media_condition': listing.get('condition', 'Unknown'),
-                        'sleeve_condition': listing.get('sleeve_condition', 'Unknown'),
-                        'listing_url': f"https://www.discogs.com/sell/item/{listing.get('id')}",
-                        'status': listing.get('status', 'For Sale'),
-                        'listed_date': listing.get('listed', '')
-                    }
-                    all_items.append(processed_item)
-                
-                time.sleep(0.1)
-                
-            except Exception as e:
-                current_app.logger.warning(f"Error on page {page}: {e}")
-                failed_pages.append(page)
-                continue
         
         current_app.logger.info(f"Fetched {len(all_items)} items, failed pages: {failed_pages}")
         

@@ -19,7 +19,7 @@ class Config:
     DISCOGS_ACCESS_SECRET = os.getenv('DISCOGS_ACCESS_SECRET')
     
     # Rate limiting
-    DISCOGS_RATE_LIMIT_PER_MINUTE = 50
+    DISCOGS_RATE_LIMIT_PER_MINUTE = 60
     
     # Background jobs
     ENABLE_BACKGROUND_JOBS = False  # Disabled - incremental updates handle this more efficiently

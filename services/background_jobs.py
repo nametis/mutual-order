@@ -59,49 +59,25 @@ class BackgroundJobService:
             current_app.logger.info("🌙 Starting nightly seller inventory refresh")
             start_time = datetime.now(timezone.utc)
             
-            # Get all open orders
-            open_orders = Order.query.filter(
-                Order.status.in_(['building', 'validation'])
-            ).all()
+            # Get a user with Discogs credentials for API calls
+            user = User.query.filter(
+                User.discogs_access_token.isnot(None),
+                User.discogs_access_secret.isnot(None)
+            ).first()
             
-            refreshed_count = 0
-            for order in open_orders:
-                try:
-                    # No longer skipping large sellers - incremental updates handle them efficiently
-                    
-                    # Get a user with Discogs credentials for API calls
-                    user = User.query.filter(
-                        User.discogs_access_token.isnot(None),
-                        User.discogs_access_secret.isnot(None)
-                    ).first()
-                    
-                    if not user:
-                        current_app.logger.warning("No user with Discogs credentials found")
-                        continue
-                    
-                    # Force refresh seller inventory
-                    inventory, metadata = wantlist_matching_service.force_refresh_seller_inventory(
-                        order.seller_name,
-                        user.id,
-                        user.discogs_access_token,
-                        user.discogs_access_secret
-                    )
-                    
-                    if inventory:
-                        refreshed_count += 1
-                        current_app.logger.info(f"✅ Refreshed {order.seller_name}: {len(inventory)} items")
-                    else:
-                        current_app.logger.warning(f"❌ Failed to refresh {order.seller_name}")
-                    
-                    # Rate limiting - wait between sellers (reduced due to incremental updates)
-                    time.sleep(1)
-                    
-                except Exception as e:
-                    current_app.logger.error(f"Error refreshing {order.seller_name}: {e}")
-                    continue
+            if not user:
+                current_app.logger.warning("No user with Discogs credentials found")
+                return
+            
+            # Refresh all registered sellers (from orders and favorite sellers)
+            wantlist_matching_service.refresh_all_registered_sellers(
+                user.id,
+                user.discogs_access_token,
+                user.discogs_access_secret
+            )
             
             duration = datetime.now(timezone.utc) - start_time
-            current_app.logger.info(f"🌙 Nightly seller refresh completed: {refreshed_count} sellers in {duration}")
+            current_app.logger.info(f"🌙 Nightly seller refresh completed in {duration}")
             self.last_run['seller_inventories'] = datetime.now(timezone.utc)
             
         except Exception as e:
