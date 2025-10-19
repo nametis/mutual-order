@@ -4,7 +4,7 @@ from .listings import listings_api
 from .chat import chat_api
 from .users import users_api
 from .wantlist import wantlist_api
-from .debug import debug_api
+from .search import search_api
 
 # Create main API blueprint
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -15,6 +15,6 @@ api_bp.register_blueprint(listings_api)
 api_bp.register_blueprint(chat_api)
 api_bp.register_blueprint(users_api)
 api_bp.register_blueprint(wantlist_api)
-api_bp.register_blueprint(debug_api)
+api_bp.register_blueprint(search_api)
 
 __all__ = ['api_bp']

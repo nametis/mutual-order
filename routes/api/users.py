@@ -197,11 +197,12 @@ def add_favorite_seller():
     data = request.get_json()
     
     if 'url' in data:
-        # Extract seller name from Discogs URL
+        # Extract seller name from Discogs URL or use as plain text
         url = data['url'].strip()
         seller_name = extract_seller_from_url(url)
         if not seller_name:
-            return jsonify({'error': 'URL invalide. Utilisez une URL de vendeur Discogs.'}), 400
+            # If it's not a URL, treat it as a plain seller name
+            seller_name = url
     elif 'seller' in data:
         seller_name = data['seller'].strip()
     else:
@@ -521,6 +522,8 @@ def extract_seller_from_url(url):
         r'discogs\.com/seller/([^/?]+)',
         r'discogs\.com/user/([^/?]+)',
         r'discogs\.com/sell/item/\d+.*seller=([^&]+)',
+        r'discogs\.com/fr/seller/([^/?]+)',  # French Discogs URLs
+        r'discogs\.com/fr/user/([^/?]+)',   # French Discogs URLs
     ]
     
     for pattern in patterns:

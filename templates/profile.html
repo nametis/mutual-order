@@ -118,16 +118,14 @@
                     </div>
                 </div>
 
-                    <!-- 20% - Copy link -->
+                    <!-- 20% - Share profile -->
                     <div class="text-center w-1/5">
-                        <button @click="copyProfileLink()" 
-                                class="p-3 text-gray-400 hover:text-gray-600 transition-colors border border-gray-200 rounded-lg"
-                                title="Copier le lien de profil">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                            </svg>
+                        <button @click="shareProfile()" 
+                                class="px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 text-sm transition-colors flex items-center justify-center space-x-2 mx-auto">
+                            <span>🔗</span>
+                            <span>Partager</span>
                         </button>
-                </div>
+                    </div>
             </div>
         </div>
 
@@ -175,20 +173,35 @@
                             </div>
                         </div>
 
-                        <!-- Friends -->
+                        <!-- Friends (Popup) - Only for public profiles -->
+                        {% if is_public %}
                         <div class="bg-white rounded-lg shadow p-6">
-                            <div class="flex items-center">
-                                <div class="p-3 rounded-full bg-purple-100">
-                                    <span class="text-2xl">👥</span>
-                                </div>
-                                <div class="ml-4">
-                                    <p class="text-sm font-medium text-gray-600">Amis</p>
-                                    <p class="text-2xl font-bold text-gray-900" id="friends-count">0</p>
+                            <div @click="showFriendsPopup = true" 
+                                 class="cursor-pointer hover:bg-purple-50 hover:shadow-md transition-all duration-200 -m-6 p-6 rounded-lg border-2 border-transparent hover:border-purple-200 group">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <div class="p-3 rounded-full bg-purple-100 group-hover:bg-purple-200 transition-colors">
+                                            <span class="text-2xl">👥</span>
+                                        </div>
+                                        <div class="ml-4">
+                                            <p class="text-sm font-medium text-gray-600 group-hover:text-purple-700 transition-colors">Amis</p>
+                                            <p class="text-2xl font-bold text-gray-900 group-hover:text-purple-900 transition-colors" x-text="friends.length"></p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center space-x-2 text-purple-400 group-hover:text-purple-600 transition-colors">
+                                        <span class="text-sm font-medium">Cliquer pour voir</span>
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                        </svg>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                        {% endif %}
                     </div>
                 </div>
+                
                 
                 <!-- Profile Settings Tab Content -->
                 <div x-show="activeTab === 'settings'" class="bg-white rounded-lg shadow p-6">
@@ -308,7 +321,7 @@
                     
                     <!-- Add Seller Form -->
                     <form @submit.prevent="addSeller()" class="flex items-center space-x-2 mb-4">
-                        <input type="url" x-model="newSellerUrl" placeholder="Collez l'URL du vendeur Discogs (ex: https://www.discogs.com/seller/nom)" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                        <input type="text" x-model="newSellerUrl" placeholder="URL du vendeur, profil, inventaire ou ID (ex: https://www.discogs.com/seller/nom ou https://www.discogs.com/fr/seller/nom ou juste 'nom')" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required>
                         <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Ajouter</button>
                     </form>
                     
@@ -340,6 +353,78 @@
         </div>
     </div>
 
+    <!-- Friends Popup Modal (Only for public profiles) -->
+    {% if is_public %}
+    <div x-show="showFriendsPopup" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto" 
+         style="display: none;">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <!-- Background overlay -->
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+                 @click="showFriendsPopup = false"></div>
+
+            <!-- Modal panel -->
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <!-- Header -->
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-medium text-gray-900">Amis de @{{ user.mutual_order_username }}</h3>
+                        <button @click="showFriendsPopup = false" 
+                                class="text-gray-400 hover:text-gray-600 transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Content -->
+                <div class="bg-white px-4 pb-4 sm:p-6">
+                    <div class="space-y-3 max-h-96 overflow-y-auto">
+                        <template x-for="friend in friends" :key="friend.id">
+                            <div class="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                        <span class="text-lg">👤</span>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-gray-900">
+                                            <a x-show="friend.mutual_order_username" 
+                                               :href="'/@' + friend.mutual_order_username" 
+                                               class="text-blue-600 hover:text-blue-800 hover:underline" 
+                                               x-text="friend.username"></a>
+                                            <span x-show="!friend.mutual_order_username" 
+                                                  x-text="friend.username"></span>
+                                        </div>
+                                        <div class="text-sm text-gray-500" x-text="'Ami depuis le ' + new Date(friend.created_at).toLocaleDateString('fr-FR')"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        <div x-show="friends.length === 0" class="text-center text-gray-500 py-8">
+                            Aucun ami pour le moment.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button @click="showFriendsPopup = false" 
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Fermer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <script>
     function profileApp() {
         return {
@@ -363,6 +448,7 @@
             isFriend: false,
             addingFriend: false,
             hasPendingRequest: false,
+            showFriendsPopup: false,
             get canSave() {
                 return (this.profile.mutual_order_username || '').length >= 2 && this.feedback.available && !this.checking;
             },
@@ -595,7 +681,7 @@
                     if (res.ok) { this.showProfileModal = false; }
                 } catch (e) { console.error(e); }
             },
-            async copyProfileLink() {
+            async shareProfile() {
                 const url = `${window.location.origin}/@{{ user.mutual_order_username }}`;
                 try {
                     await navigator.clipboard.writeText(url);

@@ -46,8 +46,14 @@ class AuthService:
     @staticmethod
     def login_user(user):
         """Log in a user by setting session"""
+        from datetime import datetime, timezone
+        
         session['user_id'] = user.id
         session.permanent = True
+        
+        # Update last login timestamp
+        user.last_login = datetime.now(timezone.utc)
+        db.session.commit()
     
     @staticmethod
     def logout_user():

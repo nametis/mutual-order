@@ -90,8 +90,8 @@
                 <!-- Danger Zone -->
                 <div class="border-t pt-4">
                     <button type="button" @click="confirmDeleteOrder()" 
-                            class="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
-                        🗑️ Supprimer définitivement la commande
+                            class="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                            x-text="order && order.status === 'deleted' && window.isAdmin ? '🗑️ Supprimer définitivement de la DB' : '🗑️ Supprimer la commande'">
                     </button>
                 </div>
             </div>

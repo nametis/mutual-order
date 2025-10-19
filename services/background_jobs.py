@@ -7,7 +7,7 @@ import threading
 from datetime import datetime, timedelta, timezone
 from flask import current_app
 from models import Order, User
-from services import wantlist_matching_service, discogs_service
+from services import wantlist_matching_service, discogs_service, wantlist_service
 
 class BackgroundJobService:
     """Service for managing background jobs"""
@@ -28,6 +28,7 @@ class BackgroundJobService:
         schedule.every().day.at("02:00").do(self.refresh_all_seller_inventories)
         schedule.every().day.at("03:00").do(self.refresh_all_user_wantlists)
         schedule.every().day.at("04:00").do(self.cleanup_old_cache)
+        schedule.every().day.at("05:00").do(self.refresh_dashboard_cache)
         schedule.every(6).hours.do(self.refresh_active_sellers)
         
         # Start job thread
@@ -99,25 +100,20 @@ class BackgroundJobService:
             refreshed_count = 0
             for user in users:
                 try:
-                    # Refresh wantlist
-                    wantlist = discogs_service.get_user_wantlist(
-                        user.id,
-                        user.discogs_username,
-                        user.discogs_access_token,
-                        user.discogs_access_secret
-                    )
+                    # Sync wantlist to database (force refresh)
+                    wantlist_items = wantlist_service.sync_user_wantlist(user.id, force_refresh=True)
                     
-                    if wantlist:
+                    if wantlist_items:
                         refreshed_count += 1
-                        current_app.logger.info(f"✅ Refreshed wantlist for {user.username}: {len(wantlist)} items")
+                        current_app.logger.info(f"✅ Synced wantlist for {user.username}: {len(wantlist_items)} items")
                     else:
-                        current_app.logger.warning(f"❌ Failed to refresh wantlist for {user.username}")
+                        current_app.logger.warning(f"❌ No wantlist items synced for {user.username}")
                     
                     # Rate limiting - wait between users
-                    time.sleep(1)
+                    time.sleep(2)  # Increased delay to respect Discogs rate limits
                     
                 except Exception as e:
-                    current_app.logger.error(f"Error refreshing wantlist for {user.username}: {e}")
+                    current_app.logger.error(f"Error syncing wantlist for {user.username}: {e}")
                     continue
             
             duration = datetime.now(timezone.utc) - start_time
@@ -220,6 +216,26 @@ class BackgroundJobService:
         except Exception as e:
             current_app.logger.error(f"Error in manual job trigger: {e}")
             return False
+    
+    def refresh_dashboard_cache(self):
+        """Refresh dashboard cache for all users (nightly at 5 AM)"""
+        try:
+            from services import cache_service
+            current_app.logger.info("🌅 Starting nightly dashboard cache refresh")
+            start_time = datetime.now(timezone.utc)
+            
+            # Clear all dashboard caches
+            from services.cache_service import invalidate_cache_pattern
+            invalidate_cache_pattern("dashboard_orders_*")
+            invalidate_cache_pattern("seller_info_*")
+            invalidate_cache_pattern("seller_inventory_count_*")
+            
+            duration = (datetime.now(timezone.utc) - start_time).total_seconds()
+            current_app.logger.info(f"🌅 Dashboard cache refresh completed in {duration:.2f}s")
+            self.last_run['dashboard_cache'] = datetime.now(timezone.utc)
+            
+        except Exception as e:
+            current_app.logger.error(f"Error in nightly dashboard cache refresh: {e}")
 
 # Global service instance
 background_job_service = BackgroundJobService()

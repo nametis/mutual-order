@@ -30,7 +30,7 @@
                             📅 Date prévue de la réalisation de la commande *
                         </label>
                         <input type="date" x-model="form.deadline" required
-                            :min="new Date().toISOString().split('T')[0]"
+                            :min="getTomorrowDate()"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                         <p class="mt-2 text-sm text-gray-600">
                         </p>
@@ -125,6 +125,12 @@
                     payment_timing: 'avant la commande',
                     user_location: '{{ user.default_location or "" }}',
                     seller_shop_url: ''
+                },
+                
+                getTomorrowDate() {
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    return tomorrow.toISOString().split('T')[0];
                 },
                 
                 async createOrder() {

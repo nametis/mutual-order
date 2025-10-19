@@ -57,6 +57,15 @@ def add_listing(order_id):
         db.session.add(listing)
         db.session.commit()
         
+        # Clear dashboard cache since new listing was added
+        try:
+            from services import cache_service
+            from services.cache_service import invalidate_cache_pattern
+            invalidate_cache_pattern("dashboard_orders_*")
+            current_app.logger.info("Dashboard cache cleared after listing addition")
+        except Exception as e:
+            current_app.logger.error(f"Error clearing cache: {e}")
+        
         return jsonify(listing.to_dict())
         
     except Exception as e:

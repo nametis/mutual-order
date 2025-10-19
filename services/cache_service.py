@@ -20,7 +20,6 @@ class CacheService:
             from flask import current_app
             redis_url = current_app.config.get('REDIS_URL', 'redis://localhost:6379/0')
             
-            # Debug: Show what URL we're trying to connect to
             current_app.logger.info(f"🔍 Attempting Redis connection to: {redis_url}")
             
             self.redis_client = redis.from_url(redis_url, decode_responses=True)

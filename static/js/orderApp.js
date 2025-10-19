@@ -229,8 +229,15 @@ function orderApp() {
         },
 
         confirmDeleteOrder() {
-            if (confirm('ATTENTION: Supprimer définitivement cette commande et tous ses disques ? Cette action est irréversible.')) {
-                this.deleteOrder();
+            // Check if order is already deleted and user is admin
+            if (this.order && this.order.status === 'deleted' && window.isAdmin) {
+                if (confirm('Cette commande est déjà supprimée. Voulez-vous la supprimer définitivement de la base de données ?')) {
+                    this.deleteOrder();
+                }
+            } else {
+                if (confirm('Êtes-vous sûr de vouloir supprimer cette commande ?')) {
+                    this.deleteOrder();
+                }
             }
         },
 
@@ -239,7 +246,10 @@ function orderApp() {
                 const response = await fetch(`/api/orders/${this.getOrderId()}`, { method: 'DELETE' });
                 const result = await response.json();
                 if (response.ok) { 
-                    alert('Commande supprimée avec succès'); 
+                    // Show success message based on the response
+                    if (result.message) {
+                        alert(result.message);
+                    }
                     window.location.href = '/'; 
                 } else {
                     alert(result.error || 'Erreur lors de la suppression');

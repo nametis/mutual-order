@@ -10,6 +10,7 @@ class User(db.Model):
     profile_completed = db.Column(db.Boolean, default=False)
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    last_login = db.Column(db.DateTime, nullable=True)
     
     # New profile fields for settings
     default_location = db.Column(db.String(200), nullable=True)

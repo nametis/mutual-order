@@ -5,7 +5,7 @@ class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     seller_name = db.Column(db.String(100), nullable=False, index=True)
     creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
     status = db.Column(db.String(20), default='building', index=True)
     status_changed_at = db.Column(db.DateTime, nullable=True)
     max_amount = db.Column(db.Float, nullable=True)
@@ -18,6 +18,13 @@ class Order(db.Model):
     discount = db.Column(db.Float, default=0.0)
     user_location = db.Column(db.String(200), nullable=True)
     paypal_link = db.Column(db.Text, nullable=True)
+    
+    # Database optimization indexes
+    __table_args__ = (
+        db.Index('idx_creator_status', 'creator_id', 'status'),
+        db.Index('idx_status_created', 'status', 'created_at'),
+        db.Index('idx_creator_created', 'creator_id', 'created_at'),
+    )
     
     # Relationships
     listings = db.relationship('Listing', backref='order', cascade='all, delete-orphan', lazy='dynamic')

@@ -25,16 +25,15 @@
                     <p class="text-gray-600">Gérez vos commandes groupées</p>
                 </div>
                 <div class="flex space-x-3">
-                    <a href="{{ url_for('views.profile', tab='friends') }}" 
-                       class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2">
-                        <span>+</span>
-                        <span>Ajouter un ami</span>
-                    </a>
                     <a href="/create_order_form" 
                        class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
                         <span>+</span>
                         <span>Créer une nouvelle commande</span>
                     </a>
+                    <button @click="clearCache()" 
+                            class="bg-gray-600 text-white px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors">
+                        🔄 Clear Cache
+                    </button>
                 </div>
             </div>
 
@@ -68,6 +67,7 @@
                         </button>
                     </div>
                     
+                    
                     <div class="border-l border-gray-300 h-6"></div>
                     
                     <!-- Archive Filter Button -->
@@ -94,9 +94,14 @@
                                             <span x-text="order.seller_info.location"></span>
                                         </div>
                                     </div>
-                                    <span class="text-xs font-semibold px-2 py-1 rounded-full"
-                                        :class="getStatusClass(order.status)"
-                                        x-text="getStatusText(order.status)"></span>
+                                    <div class="flex flex-col items-end space-y-1">
+                                        <span class="text-xs font-semibold px-2 py-1 rounded-full"
+                                            :class="getStatusClass(order.status)"
+                                            x-text="getStatusText(order.status)"></span>
+                                        <span class="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-700"
+                                            x-text="formatRefsCount(order.seller_inventory_count || 0)"></span>
+                                        <!-- Admin-specific participant count -->
+                                    </div>
                                 </div>
 
                                 <div class="flex-grow flex flex-col items-center justify-center text-center space-y-4 my-6">
@@ -174,7 +179,7 @@
             filters: {
                 creator: false,
                 participant: false,
-                archived: false
+                archived: false,
             },
             
             async init() {
@@ -183,14 +188,34 @@
                 this.loading = false;
             },
             
+            
             async loadOrders() {
                 try {
                     const response = await fetch('/api/orders');
                     if (response.ok) {
                         this.orders = await response.json();
+                        console.log('Loaded orders:', this.orders.length);
+                        console.log('First order sample:', this.orders[0]);
+                    } else {
+                        console.error('Failed to load orders:', response.status, response.statusText);
                     }
                 } catch (error) {
                     console.error('Error loading orders:', error);
+                }
+            },
+            
+            async clearCache() {
+                try {
+                    const response = await fetch('/api/orders/cache/clear/user', { method: 'POST' });
+                    if (response.ok) {
+                        console.log('Cache cleared, reloading orders...');
+                        await this.loadOrders();
+                        this.applyFilters();
+                    } else {
+                        console.error('Failed to clear cache');
+                    }
+                } catch (error) {
+                    console.error('Error clearing cache:', error);
                 }
             },
             
@@ -223,12 +248,21 @@
                 let filtered = [...this.orders];
                 const isJoined = (o) => o.is_creator || o.is_participant;
                 const isBuilding = (o) => o.status === 'building';
-                const isArchived = (o) => ['delivered', 'closed'].includes(o.status);
+                const isArchived = (o) => ['delivered', 'closed', 'deleted'].includes(o.status);
+
+                // Debug logging
+                console.log('Admin status:', window.isAdmin);
+                console.log('Total orders:', this.orders.length);
+                console.log('Main tab:', this.mainTab);
 
                 // Apply main tab filter
                 if (this.mainTab === 'all') {
-                    // Show all orders where user is involved OR building phase orders
-                    filtered = filtered.filter(o => isJoined(o) || isBuilding(o));
+                    // For admins: show all orders (already filtered server-side)
+                    // For regular users: show orders where user is involved OR building phase orders
+                    if (!window.isAdmin) {
+                        filtered = filtered.filter(o => isJoined(o) || isBuilding(o));
+                    }
+                    // For admins, no additional filtering needed - show all orders from server
                 } else if (this.mainTab === 'my') {
                     // Only orders where user is creator or participant
                     filtered = filtered.filter(o => isJoined(o));
@@ -241,6 +275,7 @@
                     // Show orders where user is participant but NOT creator
                     filtered = filtered.filter(o => o.is_participant && !o.is_creator);
                 }
+
 
                 // Apply archive filter
                 if (this.filters.archived) {
@@ -286,7 +321,8 @@
                     'validation': 'Validation', 
                     'ordered': 'Commandé',
                     'delivered': 'Livré',
-                    'closed': 'Distribué'
+                    'closed': 'Distribué',
+                    'deleted': 'Supprimé'
                 };
                 return texts[status] || status;
             },
@@ -297,9 +333,37 @@
                     'validation': 'bg-blue-100 text-blue-800',
                     'ordered': 'bg-green-100 text-green-800',
                     'delivered': 'bg-purple-100 text-purple-800',
-                    'closed': 'bg-gray-100 text-gray-800'
+                    'closed': 'bg-gray-100 text-gray-800',
+                    'deleted': 'bg-red-100 text-red-800'
                 };
                 return classes[status] || 'bg-gray-100 text-gray-800';
+            },
+            
+            formatRefsCount(count) {
+                if (count === 0) return '0 Refs';
+                
+                // 0 to 50: show exact number
+                if (count <= 50) {
+                    return `${count} Refs`;
+                }
+                
+                // 50 to 950: increments of 50
+                if (count <= 950) {
+                    const rounded = Math.floor(count / 50) * 50;
+                    return `${rounded}+ Refs`;
+                }
+                
+                // 1000 to 10000: increments of 100 (show as k)
+                if (count <= 10000) {
+                    const rounded = Math.floor(count / 100) * 100;
+                    const k = (rounded / 1000).toFixed(1);
+                    return `${k}k Refs`;
+                }
+                
+                // 10000+: increments of 1000 (show as k)
+                const rounded = Math.floor(count / 1000) * 1000;
+                const k = (rounded / 1000).toFixed(0);
+                return `${k}k Refs`;
             }
         }
     }

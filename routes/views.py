@@ -43,10 +43,6 @@ def create_order_form():
         seller_shop_url = request.form.get('seller_shop_url', '').strip()
         user_location = request.form.get('user_location', '').strip()
         
-        # Debug logging
-        current_app.logger.info(f"=== CREATE ORDER DEBUG ===")
-        current_app.logger.info(f"URL received: {repr(first_listing_url)}")
-        current_app.logger.info(f"URL length: {len(first_listing_url) if first_listing_url else 0}")
         
         # Validation
         if not first_listing_url:
@@ -89,12 +85,15 @@ def create_order_form():
             listing_data = discogs_service.fetch_listing_data(listing_id)
             current_app.logger.info(f"Listing data received: title='{listing_data.get('title', 'N/A')}', seller='{listing_data.get('seller_name', 'N/A')}'")
             
-            # Check if order already exists for this seller
-            existing_order = Order.query.filter_by(seller_name=listing_data['seller_name']).first()
-            if existing_order:
-                current_app.logger.info(f"Existing order found for seller {listing_data['seller_name']}")
-                flash(f'Une commande existe déjà pour le vendeur {listing_data["seller_name"]}.', 'info')
-                return redirect(url_for('views.view_order', order_id=existing_order.id))
+            # Check if order already exists for this seller in building status
+            existing_building_order = Order.query.filter_by(
+                seller_name=listing_data['seller_name'], 
+                status='building'
+            ).first()
+            if existing_building_order:
+                current_app.logger.info(f"Existing building order found for seller {listing_data['seller_name']}")
+                flash(f'Une commande est déjà en cours pour le vendeur {listing_data["seller_name"]}.', 'info')
+                return redirect(url_for('views.view_order', order_id=existing_building_order.id))
             
             current_app.logger.info("Creating new order...")
 
@@ -133,6 +132,17 @@ def create_order_form():
             db.session.add(listing)
             db.session.commit()
             current_app.logger.info("Order and listing committed to database successfully")
+            
+            # Clear dashboard cache for all users since new order was created
+            try:
+                from services import cache_service
+                from services.cache_service import invalidate_cache_pattern
+                invalidate_cache_pattern("dashboard_orders_*")
+                cache_service.delete(f"seller_info_{order.seller_name}")
+                cache_service.delete(f"seller_inventory_count_{order.seller_name}")
+                current_app.logger.info("Dashboard cache cleared after order creation")
+            except Exception as e:
+                current_app.logger.error(f"Error clearing cache: {e}")
             
             flash(f'Commande créée pour {listing_data["seller_name"]} !', 'success')
             return redirect(url_for('views.view_order', order_id=order.id))
@@ -202,46 +212,6 @@ def logout():
     flash('Déconnexion réussie.', 'info')
     return redirect(url_for('auth.login'))
 
-# Debug/Admin routes (should be removed in production)
-@views_bp.route('/reset_db_with_test_users_and_chat')
-@login_required
-def reset_db_with_test_users_and_chat():
-    """Reset database (admin only)"""
-    current_user = auth_service.get_current_user()
-    if not current_user.is_admin:
-        flash('Accès administrateur requis', 'danger')
-        return redirect(url_for('views.index'))
-    
-    try:
-        # Drop all tables and recreate
-        db.drop_all()
-        db.create_all()
-        
-        flash('Base de données réinitialisée avec succès ! Connectez-vous avec Discogs pour créer votre compte.', 'success')
-        auth_service.logout_user()
-        return redirect(url_for('auth.login'))
-        
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Erreur lors de la réinitialisation: {str(e)}', 'danger')
-        return redirect(url_for('views.index'))
-
-@views_bp.route('/clear_cache')
-@login_required
-def clear_cache():
-    """Clear all cache (admin only)"""
-    current_user = auth_service.get_current_user()
-    if not current_user.is_admin:
-        flash('Accès administrateur requis', 'danger')
-        return redirect(url_for('views.index'))
-    
-    from services import cache_service
-    if cache_service.flush_all():
-        flash('Cache vidé avec succès', 'success')
-    else:
-        flash('Pas de cache Redis disponible', 'info')
-    
-    return redirect(url_for('views.index'))
 
 @views_bp.route('/profile')
 @views_bp.route('/profile/<tab>')
@@ -280,9 +250,3 @@ def settings():
     """User settings page"""
     user = auth_service.get_current_user()
     return render_template('user_settings.html', current_user=user)
-
-@views_bp.route('/debug/wantlist')
-@login_required
-def debug_wantlist():
-    """Debug page for wantlist matching"""
-    return render_template('debug_wantlist.html')
