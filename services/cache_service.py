@@ -158,11 +158,17 @@ def invalidate_cache_pattern(pattern):
         return False
     
     try:
-        keys = cache_service.redis_client.keys(f"cache:{pattern}:*")
+        # Look for keys matching the pattern directly (without cache: prefix)
+        keys = cache_service.redis_client.keys(pattern)
         if keys:
-            cache_service.redis_client.delete(*keys)
-        return True
+            deleted_count = cache_service.redis_client.delete(*keys)
+            print(f"DEBUG: Invalidated {deleted_count} cache keys matching pattern: {pattern}")
+            return True
+        else:
+            print(f"DEBUG: No cache keys found matching pattern: {pattern}")
+            return True
     except Exception as e:
+        print(f"DEBUG: Cache invalidation error: {e}")
         current_app.logger.warning(f"Cache invalidation error: {e}")
         return False
 

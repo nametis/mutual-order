@@ -15,6 +15,7 @@ def get_orders():
     
     # Check cache first
     cache_key = f"dashboard_orders_{user.id}_{user.is_admin}"
+    print(f"DEBUG: Looking for cache key: {cache_key}")
     cached_data = cache_service.get(cache_key)
     if cached_data:
         print(f"DEBUG: Returning cached data for {'admin' if user.is_admin else 'user'} {user.id}: {len(cached_data)} orders")
@@ -103,7 +104,9 @@ def get_orders():
         orders_data.append(order_data)
     
     # Cache the entire dashboard data for 1 hour
+    print(f"DEBUG: Setting cache key: {cache_key} with {len(orders_data)} orders")
     cache_service.set(cache_key, orders_data, expire_seconds=3600)
+    print(f"DEBUG: Cache set successfully for key: {cache_key}")
     
     print(f"DEBUG: Returning {len(orders_data)} orders to {'admin' if user.is_admin else 'user'} {user.id}")
     if orders_data:

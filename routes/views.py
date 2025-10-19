@@ -137,11 +137,14 @@ def create_order_form():
             try:
                 from services import cache_service
                 from services.cache_service import invalidate_cache_pattern
+                print(f"DEBUG: Clearing cache after order {order.id} creation")
                 invalidate_cache_pattern("dashboard_orders_*")
                 cache_service.delete(f"seller_info_{order.seller_name}")
                 cache_service.delete(f"seller_inventory_count_{order.seller_name}")
+                print(f"DEBUG: Cache cleared for order {order.id}")
                 current_app.logger.info("Dashboard cache cleared after order creation")
             except Exception as e:
+                print(f"DEBUG: Error clearing cache: {e}")
                 current_app.logger.error(f"Error clearing cache: {e}")
             
             flash(f'Commande créée pour {listing_data["seller_name"]} !', 'success')

@@ -30,7 +30,7 @@
                         <span>+</span>
                         <span>Créer une nouvelle commande</span>
                     </a>
-                    <button @click="clearCache()" 
+                    <button x-show="window.isAdmin" @click="clearCache()" 
                             class="bg-gray-600 text-white px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors">
                         🔄 Clear Cache
                     </button>
