@@ -17,8 +17,8 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///mutual_order.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # CSRF Protection - ENABLED for security
-    WTF_CSRF_ENABLED = True
+    # CSRF Protection - DISABLED temporarily
+    WTF_CSRF_ENABLED = False
     WTF_CSRF_TIME_LIMIT = 3600  # 1 hour
     
     # Redis

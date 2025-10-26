@@ -63,17 +63,17 @@ def initialize_extensions(app):
     # Initialize database
     db.init_app(app)
     
-    # Initialize CSRF protection if enabled
-    if app.config.get('WTF_CSRF_ENABLED', False):
-        try:
-            from flask_wtf.csrf import CSRFProtect
-            csrf = CSRFProtect()
-            csrf.init_app(app)
-            app.logger.info("CSRF protection enabled")
-        except ImportError:
-            app.logger.warning("Flask-WTF not installed, CSRF protection disabled")
-        except Exception as e:
-            app.logger.error(f"Error initializing CSRF: {e}")
+    # CSRF protection is currently disabled
+    # if app.config.get('WTF_CSRF_ENABLED', False):
+    #     try:
+    #         from flask_wtf.csrf import CSRFProtect
+    #         csrf = CSRFProtect()
+    #         csrf.init_app(app)
+    #         app.logger.info("CSRF protection enabled")
+    #     except ImportError:
+    #         app.logger.warning("Flask-WTF not installed, CSRF protection disabled")
+    #     except Exception as e:
+    #         app.logger.error(f"Error initializing CSRF: {e}")
     
     # Create tables if they don't exist
     with app.app_context():

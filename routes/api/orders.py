@@ -177,8 +177,18 @@ def update_order_status(order_id):
     if not auth_service.is_authenticated():
         return jsonify({'error': 'Not authenticated'}), 401
     
-    data = request.get_json()
+    try:
+        from flask import current_app
+        current_app.logger.error(f"Status update request - Content-Type: {request.content_type}")
+        current_app.logger.error(f"Status update request - Data: {request.data}")
+    except:
+        pass
+    
+    data = request.get_json(silent=True) or {}
     new_status = data.get('status')
+    
+    if not new_status:
+        return jsonify({'error': 'Status is required', 'data': str(data)}), 400
     
     order = Order.query.get_or_404(order_id)
     current_user = auth_service.get_current_user()
@@ -192,7 +202,7 @@ def update_order_status(order_id):
         valid_statuses.append('deleted')
     
     if new_status not in valid_statuses:
-        return jsonify({'error': 'Invalid status'}), 400
+        return jsonify({'error': f'Invalid status: {new_status}. Valid statuses: {valid_statuses}'}), 400
     
     try:
         old_status = order.status
@@ -232,11 +242,11 @@ def update_order_settings(order_id):
         return jsonify({'error': 'Only creator can modify order settings'}), 403
     
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         
         # Update order settings
         
-        if 'deadline' in data:
+        if 'deadline' in data and data['deadline']:
             if data['deadline']:
                 try:
                     order.deadline = datetime.strptime(data['deadline'], '%Y-%m-%d')
