@@ -66,14 +66,15 @@ class DiscogsService:
             else:
                 current_app.logger.warning("⚠️ Discogs credentials missing")
         except RuntimeError:
-            # No app context - just print to stdout
-            print("⚠️ Discogs client setup requires app context")
+            import logging
+            logging.warning("⚠️ Discogs client setup requires app context")
         except Exception as e:
             try:
                 from flask import current_app
                 current_app.logger.error(f"Error setting up Discogs client: {e}")
             except RuntimeError:
-                print(f"Error setting up Discogs client: {e}")
+                import logging
+                logging.error(f"Error setting up Discogs client: {e}")
         finally:
             self._initialized = True
     
@@ -124,8 +125,7 @@ class DiscogsService:
         try:
             rate_limiter.check_limit()
             listing = self.client.listing(listing_id)
-            
-            
+
             image_url = None
             if listing.release and listing.release.images:
                 image_url = listing.release.images[0].get("uri")
@@ -151,7 +151,7 @@ class DiscogsService:
         except Exception as e:
             raise Exception(f"Erreur lors de la récupération des données Discogs: {e}")
     
-    @cache_result(expire_seconds=3600)  # 1 hour cache
+    @cache_result(expire_seconds=900)  # 15 minutes cache
     def fetch_seller_inventory_count(self, seller_name):
         """Fetch seller's inventory count (lightweight call)"""
         if not self._initialized:
@@ -161,28 +161,37 @@ class DiscogsService:
             from flask import current_app
             rate_limiter.check_limit()
             
+            # URL encode the seller name
+            import urllib.parse
+            encoded_seller_name = urllib.parse.quote(seller_name)
+            
             # Get OAuth session for authenticated requests
             oauth = self.get_oauth_session(
                 current_app.config.get('DISCOGS_ACCESS_TOKEN'),
                 current_app.config.get('DISCOGS_ACCESS_SECRET')
             )
             
+            url = f'https://api.discogs.com/users/{encoded_seller_name}/inventory'
+
             # Get pagination info from first page to get total count
             response = oauth.get(
-                f'https://api.discogs.com/users/{seller_name}/inventory',
+                url,
                 params={'page': 1, 'per_page': 1}  # Only need 1 item to get pagination info
             )
-            
+
             if response.status_code == 200:
                 data = response.json()
                 pagination = data.get('pagination', {})
                 total_items = pagination.get('items', 0)
+                
                 return total_items
             else:
+                
                 current_app.logger.error(f"Failed to get inventory count for {seller_name}: {response.status_code}")
                 return 0
                 
         except Exception as e:
+            
             current_app.logger.error(f"Error fetching inventory count for {seller_name}: {e}")
             return 0
 
@@ -841,7 +850,6 @@ class DiscogsService:
         current_app.logger.info(f"Fetched {len(all_items)} items, failed pages: {failed_pages}")
         
         return all_items, all_items[:20]
-
 
 # Global service instance
 discogs_service = DiscogsService()

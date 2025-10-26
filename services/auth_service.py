@@ -66,8 +66,13 @@ class AuthService:
         # Check if user exists
         user = User.query.filter_by(discogs_username=discogs_username).first()
         
-        # Determine if user should be admin
-        is_admin = (discogs_username == 'vinc305')
+        # Admin status should be managed via database column
+        # Initial admin can be set via direct database query or admin interface
+        # For new users, default to non-admin
+        is_admin = False
+        if user and user.is_admin:
+            # Preserve existing admin status
+            is_admin = True
         
         if not user:
             # Create new user
@@ -96,14 +101,19 @@ class AuthService:
             raise Exception(f"Failed to create/update user: {e}")
     
     @staticmethod
-    def complete_user_profile(user, mutual_order_username):
+    def complete_user_profile(user, mutual_order_username, city):
         """Complete user profile setup"""
+        from models.user import CITY_CHOICES
+        
         # Validation
         if not mutual_order_username or len(mutual_order_username.strip()) < 2:
             raise ValueError("Username must be at least 2 characters")
         
         if len(mutual_order_username) > 30:
             raise ValueError("Username cannot exceed 30 characters")
+        
+        if not city or city not in CITY_CHOICES:
+            raise ValueError("Please select a valid city")
         
         # Check for forbidden names
         forbidden_names = ['admin', 'api', 'www', 'support', 'help', 'discogs', 'mutual', 'order']
@@ -117,6 +127,7 @@ class AuthService:
         
         # Update user
         user.mutual_order_username = mutual_order_username.strip()
+        user.city = city
         user.profile_completed = True
         
         try:
@@ -220,7 +231,6 @@ class AuthService:
             session.pop('oauth_token', None)
             session.pop('oauth_token_secret', None)
             raise Exception(f"OAuth completion failed: {e}")
-
 
 # Global auth service instance
 auth_service = AuthService()

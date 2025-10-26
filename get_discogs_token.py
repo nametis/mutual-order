@@ -2,7 +2,6 @@ import os
 from requests_oauthlib import OAuth1Session
 from urllib.parse import parse_qs
 
-
 def main():
 	consumer_key = os.environ.get('DISCOGS_CONSUMER_KEY')
 	consumer_secret = os.environ.get('DISCOGS_CONSUMER_SECRET')
@@ -47,9 +46,6 @@ def main():
 
 	print("\nTip: ensure Discogs buyer settings currency is set to EUR.")
 
-
 if __name__ == '__main__':
 	main()
-
-
 

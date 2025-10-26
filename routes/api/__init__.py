@@ -5,6 +5,9 @@ from .chat import chat_api
 from .users import users_api
 from .wantlist import wantlist_api
 from .search import search_api
+from .notifications import notifications_api
+from .payments import payments_api as payments_bp
+from .telegram_admin import telegram_admin_api
 
 # Create main API blueprint
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -16,5 +19,8 @@ api_bp.register_blueprint(chat_api)
 api_bp.register_blueprint(users_api)
 api_bp.register_blueprint(wantlist_api)
 api_bp.register_blueprint(search_api)
+api_bp.register_blueprint(notifications_api)
+api_bp.register_blueprint(payments_bp)
+api_bp.register_blueprint(telegram_admin_api)
 
 __all__ = ['api_bp']

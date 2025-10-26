@@ -16,7 +16,8 @@ class Order(db.Model):
     shipping_cost = db.Column(db.Float, default=0.0)
     taxes = db.Column(db.Float, default=0.0)
     discount = db.Column(db.Float, default=0.0)
-    user_location = db.Column(db.String(200), nullable=True)
+    city = db.Column(db.String(50), nullable=False)  # Order location (dropdown: Paris, Nantes, etc.)
+    distribution_method = db.Column(db.String(100), nullable=True)  # Distribution method (Bar Safe Place, Autre, etc.)
     paypal_link = db.Column(db.Text, nullable=True)
     
     # Database optimization indexes
@@ -136,11 +137,28 @@ class Order(db.Model):
         }
     
     def get_all_participants_summary(self):
-        """Summary for all participants"""
+        """Summary for all participants - always fetches fresh data from database"""
+        from .listing import Listing
+        from .user import User
+        
         participants_summary = {}
         
+        # Always fetch fresh participant list from database (avoid stale cache)
+        user_ids = db.session.query(Listing.user_id).filter(
+            Listing.order_id == self.id
+        ).distinct().all()
+        
+        # Extract IDs from tuples
+        user_ids = [uid[0] for uid in user_ids if uid[0] is not None]
+        
+        if not user_ids:
+            return {}
+        
+        # Fetch fresh participant list
+        participants = User.query.filter(User.id.in_(user_ids)).all()
+        
         # Sort participants with creator first
-        sorted_participants = sorted(self.participants, key=lambda p: (p.id != self.creator_id, p.username))
+        sorted_participants = sorted(participants, key=lambda p: (p.id != self.creator_id, p.username))
         
         for participant in sorted_participants:
             participants_summary[participant.id] = {
@@ -176,8 +194,10 @@ class Order(db.Model):
             'max_amount': self.max_amount,
             'deadline': self.deadline.isoformat() if self.deadline else None,
             'payment_timing': self.payment_timing,
-            'created_at': self.created_at.isoformat(),
-            'user_location': self.user_location,
+            'created_at': self.created_at.isoformat() + 'Z',
+            'status_changed_at': self.status_changed_at.isoformat() + 'Z' if self.status_changed_at else None,
+            'city': self.city,
+            'distribution_method': self.distribution_method,
             'paypal_link': self.paypal_link,
             'seller_shop_url': self.seller_shop_url,
             'direct_url': self.direct_url,
@@ -210,7 +230,6 @@ class Order(db.Model):
     
     def __repr__(self):
         return f'<Order {self.id}: {self.seller_name}>'
-
 
 class UserValidation(db.Model):
     id = db.Column(db.Integer, primary_key=True)

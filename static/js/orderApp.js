@@ -13,33 +13,33 @@ function orderApp() {
         unreadCount: 0,
         currentUserId: window.currentUserId,
         isAdmin: window.isAdmin === true || window.isAdmin === 'true',
-        validationAgreement: false,
-        userValidated: false,
-        validations: [],
+        payments: [],
         
         // New state variables
         showAdminModal: false,
         showAllMyListings: false,
         showAllOtherListings: false,
         participantSummaryData: [],
+        hasFavoriteSeller: false,
+        loadingFavorite: false,
+        payments: [],
         
         statusSteps: [
             { key: 'building', label: 'Collecte', emoji: '⛏️' },
-            { key: 'validation', label: 'Validation', emoji: '⏳' },
-            { key: 'ordered', label: 'Commandé', emoji: '✅' },
-            { key: 'delivered', label: 'Livré', emoji: '💿' },
-            { key: 'closed', label: 'Distribué', emoji: '🎁' }
+            { key: 'payment', label: 'Paiement', emoji: '💳' },
+            { key: 'transport', label: 'Transport', emoji: '🚚' },
+            { key: 'distribution', label: 'Distribution', emoji: '🎁' }
         ],
         
         adminForm: {
             direct_url: '',
             max_amount: '',
             deadline: '',
-            payment_timing: 'avant la commande',
             shipping_cost: 0,
             taxes: 0,
             discount: 0,
-            user_location: '',
+            city: '',
+            distribution_method: '',
             paypal_link: '',
             seller_shop_url: ''
         },
@@ -47,8 +47,9 @@ function orderApp() {
         async init() {
             await this.loadOrder();
             await this.loadSellerInfo();
-            await this.loadValidations();
+            await this.checkFavoriteSeller();
             await this.loadParticipantSummary();
+            await this.loadPayments();
             this.initAdminForm();
             this.checkUnreadMessages();
 
@@ -74,18 +75,93 @@ function orderApp() {
 
         async loadSellerInfo() {
             try {
-                console.log('Fetching seller info for:', this.order.seller_name);
                 const response = await fetch(`/api/sellers/${this.order.seller_name}`);
                 if (response.ok) {
                     this.sellerInfo = await response.json();
-                    console.log('Seller info received:', this.sellerInfo);
                 }
             } catch (error) {
                 console.error('Error loading seller info:', error);
                 this.sellerInfo = { rating: null, location: "Non spécifiée" };
             }
         },
+        
+        async checkFavoriteSeller() {
+            try {
+                const response = await fetch('/api/user/favorite_sellers');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.hasFavoriteSeller = (data.sellers || []).some(s => s.seller_name === this.order.seller_name);
+                }
+            } catch (error) {
+                console.error('Error checking favorite seller:', error);
+            }
+        },
+        
+        async toggleFavoriteSeller() {
+            if (this.loadingFavorite) return;
+            
+            this.loadingFavorite = true;
+            try {
+                if (this.hasFavoriteSeller) {
+                    // Remove from favorites
+                    const response = await fetch(`/api/user/favorite_sellers/${encodeURIComponent(this.order.seller_name)}`, {
+                        method: 'DELETE'
+                    });
+                    if (response.ok) {
+                        this.hasFavoriteSeller = false;
+                    }
+                } else {
+                    // Add to favorites
+                    const response = await fetch('/api/user/favorite_sellers', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ seller: this.order.seller_name })
+                    });
+                    if (response.ok) {
+                        this.hasFavoriteSeller = true;
+                    }
+                }
+            } catch (error) {
+                console.error('Error toggling favorite seller:', error);
+            } finally {
+                this.loadingFavorite = false;
+            }
+        },
 
+        async loadPayments() {
+            try {
+                const response = await fetch(`/api/orders/${this.getOrderId()}/payments`);
+                if (response.ok) {
+                    this.payments = await response.json();
+                } else {
+                    console.error('Failed to load payments, response:', response.status);
+                    // If payments don't exist yet, initialize them
+                    if (response.status === 403 || response.status === 404) {
+                        await this.initializePayments();
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading payments:', error);
+            }
+        },
+        
+        async initializePayments() {
+            try {
+                const response = await fetch(`/api/orders/${this.getOrderId()}/initialize-payments`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    this.payments = data.payments || [];
+                } else {
+                    console.error('Failed to initialize payments:', data.error);
+                }
+            } catch (error) {
+                console.error('Error initializing payments:', error);
+            }
+        },
+        
         async loadParticipantSummary() {
             try {
                 const response = await fetch(`/api/orders/${this.getOrderId()}/participant-summary`);
@@ -118,11 +194,11 @@ function orderApp() {
         initAdminForm() {
             this.adminForm = {
                 deadline: this.order.deadline ? this.order.deadline.split('T')[0] : '',
-                payment_timing: this.order.payment_timing || 'avant la commande',
                 shipping_cost: this.order.shipping_cost || 0,
                 taxes: this.order.taxes || 0,
                 discount: this.order.discount || 0,
-                user_location: this.order.user_location || '',
+                city: this.order.city || '',
+                distribution_method: this.order.distribution_method || '',
                 paypal_link: this.order.paypal_link || '',
                 seller_shop_url: this.order.seller_shop_url || ''
             };
@@ -217,6 +293,7 @@ function orderApp() {
                     this.showAdminModal = false;
                     await this.loadOrder();
                     await this.loadParticipantSummary();
+                    await this.loadPayments();
                     this.initAdminForm(); // Refresh the form with new data
                     setTimeout(() => this.flashMessage = '', 3000); 
                 } else {
@@ -260,47 +337,9 @@ function orderApp() {
             }
         },
 
-        // --- Validation functions ---
-        async loadValidations() {
-            try {
-                const response = await fetch(`/api/orders/${this.getOrderId()}/validation-status`);
-                if (response.ok) {
-                    const data = await response.json();
-                    this.userValidated = data.user_validated;
-                    this.validations = data.all_validations || [];
-                }
-            } catch (error) {
-                console.error('Error loading validations:', error);
-            }
-        },
-
-        async validateUserParticipation() {
-            if (!this.validationAgreement) return;
-
-            try {
-                const response = await fetch(`/api/orders/${this.getOrderId()}/validate`, {
-                    method: 'POST'
-                });
-
-                const result = await response.json();
-                if (response.ok) {
-                    this.userValidated = true;
-                    this.flashMessage = 'Participation validée avec succès';
-                    await this.loadValidations();
-                    await this.loadOrder();
-                    setTimeout(() => this.flashMessage = '', 3000);
-                } else {
-                    alert(result.error || 'Erreur lors de la validation');
-                }
-            } catch (error) {
-                console.error('Error validating participation:', error);
-                alert('Erreur lors de la validation');
-            }
-        },
 
         // --- Chat functions ---
         toggleChat() {
-            console.log('toggleChat fired', this.showChat);
             this.showChat = !this.showChat;
             if (this.showChat) { 
                 this.loadChatMessages(); 
@@ -450,6 +489,42 @@ function orderApp() {
             if (!dateString) return '';
             return new Date(dateString).toLocaleDateString('fr-FR', { year: 'numeric', month: '2-digit', day: '2-digit' });
         },
+        
+        formatOrderDate(deadline) {
+            if (!deadline) return 'N/A';
+            
+            // Handle ISO date strings - ensure we parse as UTC and convert to local
+            let date;
+            if (deadline.includes('T') && deadline.includes('Z')) {
+                // ISO string with Z (UTC) - parse directly
+                date = new Date(deadline);
+            } else if (deadline.includes('T')) {
+                // ISO string without Z - treat as UTC
+                date = new Date(deadline + 'Z');
+            } else {
+                // Fallback
+                date = new Date(deadline);
+            }
+            
+            // Check if date is valid
+            if (isNaN(date.getTime())) return 'N/A';
+            
+            const day = date.getDate();
+            const month = date.getMonth() + 1; // getMonth() returns 0-11
+            
+            return `${day}/${month}`;
+        },
+        
+        getStatusDateLabel(status) {
+            const labels = {
+                'validation': 'En validation le',
+                'ordered': 'Commandée le',
+                'delivered': 'Livrée le',
+                'closed': 'Distribuée le',
+                'deleted': 'Supprimée le'
+            };
+            return labels[status] || 'Créée le';
+        },
 
         getStepClass(stepKey, index) {
             const currentIndex = this.statusSteps.findIndex(step => step.key === this.order.status);
@@ -465,7 +540,7 @@ function orderApp() {
         },
 
         getPreviousStatus() {
-            const statusOrder = ['building', 'validation', 'ordered', 'delivered', 'closed'];
+            const statusOrder = ['building', 'payment', 'transport', 'distribution'];
             const currentIndex = statusOrder.indexOf(this.order.status);
             return currentIndex > 0 ? statusOrder[currentIndex - 1] : 'building';
         },
@@ -490,10 +565,61 @@ function orderApp() {
             }, 100);
         },    
         
-        isParticipantValidated(participantId) {
-            return this.validations.some(v => v.user_id === participantId && v.validated);
+        // --- Payment methods ---
+        getParticipantPaymentStatus(userId) {
+            const payment = this.payments.find(p => p.user.id === userId);
+            return payment ? payment.is_paid : false;
         },
-
+        
+        async togglePayment(userId) {
+            const payment = this.payments.find(p => p.user.id === userId);
+            if (!payment) {
+                console.error('No payment found for user:', userId, 'Available payments:', this.payments);
+                return;
+            }
+            
+            const newStatus = !payment.is_paid;
+            const endpoint = newStatus 
+                ? `/api/orders/${this.getOrderId()}/payments/${payment.id}/mark-paid`
+                : `/api/orders/${this.getOrderId()}/payments/${payment.id}/unmark-paid`;
+            
+            
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                let data;
+                try {
+                    data = await response.json();
+                } catch (jsonError) {
+                    console.error('Failed to parse response as JSON:', jsonError);
+                    const text = await response.text();
+                    console.error('Response text:', text);
+                    alert('Erreur de serveur: ' + text.substring(0, 100));
+                    return;
+                }
+                
+                if (response.ok && data.success) {
+                    payment.is_paid = newStatus;
+                    // Force Alpine to update by reassigning the array
+                    this.payments = [...this.payments];
+                } else {
+                    console.error('Failed to update payment:', data.error || 'Unknown error');
+                    alert(data.error || 'Erreur lors de la mise à jour du paiement');
+                }
+            } catch (error) {
+                console.error('Error toggling payment:', error);
+                alert('Erreur lors de la mise à jour du paiement: ' + error.message);
+            }
+        },
+        
+        getPaymentStatusCount() {
+            const paid = this.payments.filter(p => p.is_paid).length;
+            return { paid, total: this.payments.length };
+        },
+        
         // --- Computed properties ---
         get myTotal() {
             return this.order.current_user_summary ? this.order.current_user_summary.subtotal : 0;
@@ -516,9 +642,9 @@ function orderApp() {
         },
 
         get showChatBlock() {
-            // Show chat on step 2 (validation) or after step 3 (ordered/delivered/closed)
+            // Show chat on step 2 (payment) or after step 3 (transport/distribution)
             const stepIndex = this.statusSteps.findIndex(s => s.key === this.order.status);
-            return stepIndex === 1 || stepIndex >= 3;
+            return stepIndex >= 1;
         },
 
         openAllDiscsInTabs() {

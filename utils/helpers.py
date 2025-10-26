@@ -201,24 +201,20 @@ def get_status_info(status):
     """
     status_map = {
         'building': {
-            'text': '🛠️ COLLECTE',
+            'text': '⛏️ COLLECTE',
             'class': 'bg-yellow-100 text-yellow-800'
         },
-        'validation': {
-            'text': '⏳ VALIDATION',
+        'payment': {
+            'text': '💳 PAIEMENTS',
             'class': 'bg-blue-100 text-blue-800'
         },
-        'ordered': {
-            'text': '✅ COMMANDÉ',
+        'transport': {
+            'text': '🚚 TRANSPORT',
             'class': 'bg-green-100 text-green-800'
         },
-        'delivered': {
-            'text': '💿 LIVRÉ',
+        'distribution': {
+            'text': '🎁 DISTRIBUTION',
             'class': 'bg-purple-100 text-purple-800'
-        },
-        'closed': {
-            'text': '🎁 DISTRIBUÉ',
-            'class': 'bg-gray-100 text-gray-800'
         }
     }
     
@@ -341,8 +337,8 @@ def generate_order_summary_text(order):
     if order.deadline:
         lines.append(f"Échéance: {format_date_french(order.deadline)}")
     
-    if order.user_location:
-        lines.append(f"Localisation: {order.user_location}")
+    if order.city:
+        lines.append(f"Localisation: {order.city}")
     
     return "\n".join(lines)
 

@@ -5,9 +5,21 @@ load_dotenv()
 
 class Config:
     """Base configuration class"""
+    # SECRET_KEY must be set via environment variable in production
+    # Generate with: python -c "import secrets; print(secrets.token_hex(32))"
     SECRET_KEY = os.getenv('SECRET_KEY', "dev_key_change_in_production")
+    
+    # Verify SECRET_KEY is set properly in production
+    if SECRET_KEY == "dev_key_change_in_production" and os.getenv('FLASK_CONFIG') == 'production':
+        import warnings
+        warnings.warn("⚠️ SECRET_KEY is using default value! Set SECRET_KEY in environment variables.")
+    
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///mutual_order.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    # CSRF Protection - ENABLED for security
+    WTF_CSRF_ENABLED = True
+    WTF_CSRF_TIME_LIMIT = 3600  # 1 hour
     
     # Redis
     REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
@@ -37,6 +49,8 @@ class DevelopmentConfig(Config):
     """Development configuration"""
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///mutual_order_dev.db')
+    # CSRF can be disabled in development for easier testing
+    WTF_CSRF_ENABLED = os.getenv('CSRF_ENABLED', 'True').lower() == 'true'
 
 class ProductionConfig(Config):
     """Production configuration"""

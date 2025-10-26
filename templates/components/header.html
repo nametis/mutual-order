@@ -4,9 +4,11 @@
         <!-- Desktop Layout -->
         <div class="hidden lg:flex justify-between items-center">
             <!-- Logo -->
-            <div class="flex items-center">
-                <a href="{{ url_for('views.index') }}" class="text-xl font-bold text-blue-600 hover:text-blue-800 transition-colors">
-                    MUTUAL ORDER
+            <div class="flex items-center space-x-2">
+                <a href="{{ url_for('views.index') }}" class="flex items-center space-x-2 text-xl font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                    <img src="{{ url_for('static', filename='favicon.png') }}" alt="Mutual Order" class="w-8 h-8 block dark:hidden">
+                    <img src="{{ url_for('static', filename='favicon-white.png') }}" alt="Mutual Order" class="w-8 h-8 hidden dark:block">
+                    <span>MUTUAL ORDER</span>
                 </a>
             </div>
 
@@ -65,11 +67,78 @@
                     <a href="{{ url_for('views.profile', tab='sellers') }}" class="text-lg text-gray-700 font-medium hover:text-blue-600 transition-colors">
                         Mes vendeurs favoris
                     </a>
-                    <a href="{{ url_for('views.profile') }}" class="flex items-center space-x-2 p-1 rounded-full transition-colors hover:bg-gray-50">
-                        <span class="text-lg text-gray-700 font-medium">Mon Profil</span>
-                        <div class="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center">
-                            <span class="text-lg">👤</span>
+                    
+                    <!-- Notifications -->
+                    <div class="relative" x-data="notificationApp()" x-init="loadNotifications()">
+                        <button @click="toggleNotifications()" 
+                                class="relative p-2 rounded-full text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5-5V9a6 6 0 10-12 0v3l-5 5h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                            </svg>
+                            <span x-show="unreadCount > 0" 
+                                  x-text="unreadCount > 9 ? '9+' : unreadCount"
+                                  class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                            </span>
+                        </button>
+                        
+                        <!-- Notifications Dropdown -->
+                        <div x-show="showNotifications" 
+                             @click.away="showNotifications = false"
+                             x-transition:enter="transition ease-out duration-100"
+                             x-transition:enter-start="transform opacity-0 scale-95"
+                             x-transition:enter-end="transform opacity-100 scale-100"
+                             x-transition:leave="transition ease-in duration-75"
+                             x-transition:leave-start="transform opacity-100 scale-100"
+                             x-transition:leave-end="transform opacity-0 scale-95"
+                             class="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+                            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h3>
+                            </div>
+                            <div class="max-h-96 overflow-y-auto">
+                                <template x-for="notification in notifications.slice(0, 3)" :key="notification.id">
+                                    <div class="p-4 cursor-pointer border-b"
+                                         :class="notification.is_read 
+                                                 ? 'bg-white hover:bg-gray-50 border-gray-100' 
+                                                 : 'bg-blue-50 hover:bg-blue-100 border-blue-500'"
+                                         x-bind:class="notification.is_read 
+                                                 ? 'dark:bg-gray-800 dark:hover:bg-gray-700 dark:border-gray-700' 
+                                                 : 'dark:bg-gray-700 dark:hover:bg-gray-600 dark:border-blue-500'"
+                                         @click="handleNotificationClick(notification)">
+                                        <div class="flex items-start space-x-3">
+                                            <div class="flex-shrink-0">
+                                                <div class="w-8 h-8 rounded-full flex items-center justify-center"
+                                                     :class="notification.is_read ? 'bg-blue-100' : 'bg-blue-200'"
+                                                     x-bind:class="notification.is_read ? 'dark:bg-gray-700' : 'dark:bg-blue-600'">
+                                                    <span class="text-sm">🔔</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-sm font-medium text-gray-900 dark:text-white"
+                                                   x-text="notification.content"></p>
+                                                <p class="text-xs mt-1 text-gray-600 dark:text-gray-300"
+                                                   x-text="formatDate(notification.created_at)"></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                                <div x-show="notifications.length === 0" class="p-4 text-center text-gray-500 dark:text-gray-400">
+                                    Aucune notification
+                                </div>
+                            </div>
+                            <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+                                <a href="/notifications" 
+                                   class="block text-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium">
+                                    Voir toutes les notifications
+                                </a>
+                            </div>
                         </div>
+                    </div>
+                    
+                    <!-- Profile Icon -->
+                    <a href="{{ url_for('views.profile') }}" class="relative p-2 rounded-full text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
                     </a>
                 </div>
             {% else %}
@@ -92,8 +161,10 @@
             <div class="flex items-center gap-3">
                 <!-- Logo -->
                 <div class="flex items-center flex-shrink-0">
-                    <a href="{{ url_for('views.index') }}" class="text-lg font-bold text-blue-600 hover:text-blue-800 transition-colors">
-                        MUTUAL ORDER
+                    <a href="{{ url_for('views.index') }}" class="flex items-center space-x-2 text-lg font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                        <img src="{{ url_for('static', filename='favicon.png') }}" alt="Mutual Order" class="w-6 h-6 block dark:hidden">
+                        <img src="{{ url_for('static', filename='favicon-white.png') }}" alt="Mutual Order" class="w-6 h-6 hidden dark:block">
+                        <span>MUTUAL ORDER</span>
                     </a>
                 </div>
 
@@ -162,16 +233,30 @@
                 <div class="px-4 py-4 space-y-4">
                     {% if current_user %}
                         <!-- Profile at the top -->
-                        <a href="{{ url_for('views.profile') }}" 
-                           class="flex items-center space-x-3 py-3 border-b border-gray-200">
-                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                <span class="text-xl">👤</span>
-                            </div>
-                            <div>
-                                <div class="text-lg text-gray-900 font-medium">Mon Profil</div>
-                                <div class="text-sm text-gray-500">Gérer mon compte</div>
-                            </div>
-                        </a>
+                        <div class="flex items-center justify-between py-3 border-b border-gray-200">
+                            <a href="{{ url_for('views.profile') }}" 
+                               class="flex items-center space-x-3 flex-1">
+                                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <span class="text-xl">👤</span>
+                                </div>
+                                <div>
+                                    <div class="text-lg text-gray-900 font-medium">Mon Profil</div>
+                                    <div class="text-sm text-gray-500">Gérer mon compte</div>
+                                </div>
+                            </a>
+                            <!-- Notifications Button -->
+                            <a href="/notifications" 
+                               class="relative p-2 rounded-full text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors"
+                               x-data="notificationApp()" x-init="loadNotifications()">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5-5V9a6 6 0 10-12 0v3l-5 5h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                                </svg>
+                                <span x-show="unreadCount > 0" 
+                                      x-text="unreadCount > 9 ? '9+' : unreadCount"
+                                      class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                                </span>
+                            </a>
+                        </div>
                         
                         <!-- Navigation items -->
                         <a href="{{ url_for('views.index') }}" 

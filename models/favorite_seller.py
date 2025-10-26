@@ -23,4 +23,3 @@ class FavoriteSeller(db.Model):
             'created_at': self.created_at.isoformat()
         }
 
-

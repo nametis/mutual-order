@@ -41,9 +41,8 @@ def create_order_form():
         deadline_str = request.form.get('deadline', '').strip()
         payment_timing = request.form.get('payment_timing', 'avant la commande')
         seller_shop_url = request.form.get('seller_shop_url', '').strip()
-        user_location = request.form.get('user_location', '').strip()
-        
-        
+        city = request.form.get('city', '').strip()
+
         # Validation
         if not first_listing_url:
             current_app.logger.warning("Validation failed: missing required fields")
@@ -53,6 +52,11 @@ def create_order_form():
         if not deadline_str:
             current_app.logger.warning("Validation failed: missing deadline")
             flash('La date limite est obligatoire.', 'danger')
+            return render_template('create_order_form.html')
+        
+        if not city:
+            current_app.logger.warning("Validation failed: missing city")
+            flash('La ville est obligatoire.', 'danger')
             return render_template('create_order_form.html')
         
         # Parse deadline
@@ -100,13 +104,16 @@ def create_order_form():
             paypal_link = request.form.get('paypal_link', '').strip()
 
             # Create new order
+            distribution_method = request.form.get('distribution_method', '').strip()
+            
             order = Order(
                 seller_name=listing_data['seller_name'],
                 creator_id=current_user.id,
                 deadline=deadline,
                 payment_timing=payment_timing,
+                city=city,
+                distribution_method=distribution_method if distribution_method else None,
                 seller_shop_url=seller_shop_url if seller_shop_url else None,
-                user_location=user_location if user_location else None,
                 paypal_link=paypal_link if paypal_link else None
             )
             db.session.add(order)
@@ -130,22 +137,44 @@ def create_order_form():
                 order_id=order.id
             )
             db.session.add(listing)
+            
+            # Initialize payment records for creator
+            from models.payment import UserPayment
+            user_summary = order.get_user_summary(current_user.id)
+            creator_payment = UserPayment(
+                order_id=order.id,
+                user_id=current_user.id,
+                amount_due=user_summary['total']
+            )
+            db.session.add(creator_payment)
+            
             db.session.commit()
-            current_app.logger.info("Order and listing committed to database successfully")
+            current_app.logger.info("Order, listing, and payment records committed to database successfully")
             
             # Clear dashboard cache for all users since new order was created
             try:
                 from services import cache_service
                 from services.cache_service import invalidate_cache_pattern
-                print(f"DEBUG: Clearing cache after order {order.id} creation")
+                
                 invalidate_cache_pattern("dashboard_orders_*")
                 cache_service.delete(f"seller_info_{order.seller_name}")
-                cache_service.delete(f"seller_inventory_count_{order.seller_name}")
-                print(f"DEBUG: Cache cleared for order {order.id}")
+                invalidate_cache_pattern("cache:fetch_seller_inventory_count:*")
+                
                 current_app.logger.info("Dashboard cache cleared after order creation")
             except Exception as e:
-                print(f"DEBUG: Error clearing cache: {e}")
+                
                 current_app.logger.error(f"Error clearing cache: {e}")
+            
+            # Send notifications
+            try:
+                from services.notification_service import NotificationService
+                # Notify friends of the creator
+                NotificationService.notify_order_created(order, current_user)
+                # Notify all admins
+                NotificationService.notify_admin_order_created(order, current_user)
+            except Exception as e:
+                
+                current_app.logger.error(f"Error sending notifications: {e}")
             
             flash(f'Commande créée pour {listing_data["seller_name"]} !', 'success')
             return redirect(url_for('views.view_order', order_id=order.id))
@@ -215,7 +244,6 @@ def logout():
     flash('Déconnexion réussie.', 'info')
     return redirect(url_for('auth.login'))
 
-
 @views_bp.route('/profile')
 @views_bp.route('/profile/<tab>')
 @login_required
@@ -253,3 +281,20 @@ def settings():
     """User settings page"""
     user = auth_service.get_current_user()
     return render_template('user_settings.html', current_user=user)
+
+@views_bp.route('/notifications')
+@login_required
+def notifications():
+    """Notifications page"""
+    user = auth_service.get_current_user()
+    return render_template('notifications.html', current_user=user)
+
+@views_bp.route('/telegram-admin')
+@login_required
+def telegram_admin():
+    """Telegram bot admin dashboard (admin only)"""
+    user = auth_service.get_current_user()
+    if not user.is_admin:
+        flash('Accès administrateur requis', 'error')
+        return redirect(url_for('views.index'))
+    return render_template('telegram_admin.html', current_user=user)

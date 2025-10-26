@@ -107,9 +107,10 @@ def setup_profile():
     
     if request.method == 'POST':
         mutual_order_username = request.form.get('mutual_order_username', '').strip()
+        city = request.form.get('city', '').strip()
         
         try:
-            auth_service.complete_user_profile(user, mutual_order_username)
+            auth_service.complete_user_profile(user, mutual_order_username, city)
             flash(f'Profil configuré avec succès ! Bienvenue {mutual_order_username}', 'success')
             return redirect(url_for('views.index'))
         except ValueError as e:

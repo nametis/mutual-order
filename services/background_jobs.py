@@ -228,7 +228,7 @@ class BackgroundJobService:
             from services.cache_service import invalidate_cache_pattern
             invalidate_cache_pattern("dashboard_orders_*")
             invalidate_cache_pattern("seller_info_*")
-            invalidate_cache_pattern("seller_inventory_count_*")
+            invalidate_cache_pattern("cache:fetch_seller_inventory_count:*")
             
             duration = (datetime.now(timezone.utc) - start_time).total_seconds()
             current_app.logger.info(f"🌅 Dashboard cache refresh completed in {duration:.2f}s")

@@ -266,6 +266,5 @@ class WantlistService:
             current_app.logger.error(f"Error cleaning up old references: {e}")
             return 0
 
-
 # Global service instance
 wantlist_service = WantlistService()

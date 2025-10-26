@@ -122,10 +122,8 @@ class CacheService:
         
         return f"cache:{prefix}:{args_hash}"
 
-
 # Global cache service instance
 cache_service = CacheService()
-
 
 def cache_result(expire_seconds=3600, key_prefix=None):
     """Decorator to cache function results"""
@@ -151,7 +149,6 @@ def cache_result(expire_seconds=3600, key_prefix=None):
         return wrapper
     return decorator
 
-
 def invalidate_cache_pattern(pattern):
     """Invalidate all cache keys matching a pattern"""
     if not cache_service.is_available():
@@ -162,16 +159,15 @@ def invalidate_cache_pattern(pattern):
         keys = cache_service.redis_client.keys(pattern)
         if keys:
             deleted_count = cache_service.redis_client.delete(*keys)
-            print(f"DEBUG: Invalidated {deleted_count} cache keys matching pattern: {pattern}")
+            
             return True
         else:
-            print(f"DEBUG: No cache keys found matching pattern: {pattern}")
+            
             return True
     except Exception as e:
-        print(f"DEBUG: Cache invalidation error: {e}")
+        
         current_app.logger.warning(f"Cache invalidation error: {e}")
         return False
-
 
 def cache_key_exists(key):
     """Check if a cache key exists"""

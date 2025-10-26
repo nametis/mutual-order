@@ -1,10 +1,12 @@
 <!-- Participants -->
 <div class="bg-white rounded-lg shadow p-6">
     <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center space-x-2">
-            <span>👥</span>
-            <h3 class="text-lg font-semibold" x-text="'Participants (' + order.participants_count + ')'"></h3>
-        </div>
+        <h3 class="flex items-center space-x-2 text-lg font-bold text-gray-900">
+            <span class="bg-yellow-100 px-3 py-1 rounded-full flex items-center space-x-1">
+                <span>👥</span>
+                <span x-text="'Participants (' + order.participants_count + ')'"></span>
+            </span>
+        </h3>
         <button  x-show="order.status === 'building'" 
             @click="toggleChat()"
             class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 text-base transition-colors">

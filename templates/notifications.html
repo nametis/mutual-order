@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications - MUTUAL ORDER{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8" x-data="notificationsPageApp()" x-init="loadNotifications()">
+    <div class="max-w-4xl mx-auto px-4">
+        <!-- Header -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h1>
+                    <p class="text-gray-600 dark:text-gray-400 mt-1">Restez informé de l'activité de vos commandes</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button @click="markAllAsRead()" 
+                            :disabled="unreadCount === 0"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors">
+                        Marquer tout comme lu
+                    </button>
+                    <span class="text-sm text-gray-500 dark:text-gray-400" x-text="`${unreadCount} non lues`"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications List -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div x-show="loading" class="p-8 text-center">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p class="mt-2 text-gray-600 dark:text-gray-400">Chargement des notifications...</p>
+            </div>
+
+            <div x-show="!loading && notifications.length === 0" class="p-8 text-center">
+                <div class="text-gray-400 dark:text-gray-600 text-6xl mb-4">🔔</div>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Aucune notification</h3>
+                <p class="text-gray-600 dark:text-gray-400">Vous n'avez pas encore de notifications.</p>
+            </div>
+
+            <div x-show="!loading && notifications.length > 0" class="space-y-2">
+                <template x-for="notification in notifications" :key="notification.id">
+                    <div class="cursor-pointer rounded-lg"
+                         :class="notification.is_read 
+                                 ? 'bg-white border border-gray-200 hover:bg-gray-50' 
+                                 : 'bg-blue-50 border-l-4 border-blue-500 hover:bg-blue-100'"
+                         x-bind:class="notification.is_read 
+                                 ? 'dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700' 
+                                 : 'dark:bg-gray-700 dark:border-blue-500 dark:hover:bg-gray-600'"
+                         @click="handleNotificationClick(notification)">
+                        <div class="p-6">
+                            <div class="flex items-start space-x-4">
+                                <div class="flex-shrink-0">
+                                    <div class="w-10 h-10 rounded-full flex items-center justify-center"
+                                         :class="notification.is_read ? 'bg-blue-100' : 'bg-blue-200'"
+                                         x-bind:class="notification.is_read ? 'dark:bg-gray-700' : 'dark:bg-blue-600'">
+                                        <span class="text-lg">🔔</span>
+                                    </div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="text-lg font-medium text-gray-900 dark:text-white"
+                                            x-text="notification.content"></h3>
+                                        <div class="flex items-center space-x-2">
+                                            <span x-show="!notification.is_read" 
+                                                  class="inline-block w-2 h-2 bg-blue-600 rounded-full"></span>
+                                            <span class="text-sm text-gray-600 dark:text-gray-300"
+                                                  x-text="formatDate(notification.created_at)"></span>
+                                        </div>
+                                    </div>
+                                    <div x-show="notification.order_seller_name" class="mt-2">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                              :class="notification.is_read 
+                                                      ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200' 
+                                                      : 'bg-white text-gray-800 border border-blue-200 dark:bg-gray-800 dark:text-gray-200 dark:border-blue-600'">
+                                            Commande: <span x-text="notification.order_seller_name"></span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function notificationsPageApp() {
+    return {
+        notifications: [],
+        unreadCount: 0,
+        loading: true,
+        
+        async loadNotifications() {
+            this.loading = true;
+            try {
+                const response = await fetch('/api/notifications?limit=50');
+                if (response.ok) {
+                    this.notifications = await response.json();
+                    this.updateUnreadCount();
+                }
+            } catch (error) {
+                console.error('Error loading notifications:', error);
+            } finally {
+                this.loading = false;
+            }
+        },
+        
+        updateUnreadCount() {
+            this.unreadCount = this.notifications.filter(n => !n.is_read).length;
+        },
+        
+        async markAsRead(notificationId) {
+            try {
+                const response = await fetch(`/api/notifications/${notificationId}/read`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    const notification = this.notifications.find(n => n.id === notificationId);
+                    if (notification) {
+                        notification.is_read = true;
+                        this.updateUnreadCount();
+                    }
+                }
+            } catch (error) {
+                console.error('Error marking notification as read:', error);
+            }
+        },
+        
+        handleNotificationClick(notification) {
+            // If already read, don't mark again (to avoid duplicate requests)
+            if (!notification.is_read) {
+                // Mark as read immediately (optimistic update)
+                notification.is_read = true;
+                this.updateUnreadCount();
+                
+                // Send request to backend
+                this.markAsRead(notification.id);
+            }
+            
+            // If notification has an order_id, redirect to the order page
+            if (notification.order_id) {
+                window.location.href = `/order/${notification.order_id}`;
+            }
+            // If no order_id, do nothing (stay on notifications page)
+        },
+        
+        async markAllAsRead() {
+            try {
+                const response = await fetch('/api/notifications/mark-all-read', {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    this.notifications.forEach(n => n.is_read = true);
+                    this.updateUnreadCount();
+                }
+            } catch (error) {
+                console.error('Error marking all as read:', error);
+            }
+        },
+        
+        formatDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+            
+            if (diffInMinutes < 1) {
+                return 'À l\'instant';
+            } else if (diffInMinutes < 60) {
+                return `Il y a ${diffInMinutes} min`;
+            } else if (diffInMinutes < 1440) {
+                const hours = Math.floor(diffInMinutes / 60);
+                return `Il y a ${hours}h`;
+            } else {
+                const days = Math.floor(diffInMinutes / 1440);
+                return `Il y a ${days}j`;
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

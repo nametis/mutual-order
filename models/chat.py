@@ -30,7 +30,6 @@ class OrderChat(db.Model):
     def __repr__(self):
         return f'<OrderChat {self.id}: {self.user.username} in order {self.order_id}>'
 
-
 class ChatReadStatus(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)

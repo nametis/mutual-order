@@ -15,44 +15,28 @@ def get_orders():
     
     # Check cache first
     cache_key = f"dashboard_orders_{user.id}_{user.is_admin}"
-    print(f"DEBUG: Looking for cache key: {cache_key}")
+    
     cached_data = cache_service.get(cache_key)
     if cached_data:
-        print(f"DEBUG: Returning cached data for {'admin' if user.is_admin else 'user'} {user.id}: {len(cached_data)} orders")
+        
         return jsonify(cached_data)
-    
-    print(f"DEBUG: Cache miss - loading fresh data for {'admin' if user.is_admin else 'user'} {user.id}")
-    
+
     # Import Listing at the top level
     from models.listing import Listing
     
-    # If not cached, build the data with server-side filtering
-    print(f"DEBUG: User {user.id} is_admin = {user.is_admin}")
-    
     if user.is_admin:
         # Admins see all orders
-        print("DEBUG: Loading all orders for admin")
         orders = Order.query.order_by(Order.created_at.desc()).all()
-        print(f"DEBUG: Admin {user.id} found {len(orders)} orders")
-        for i, order in enumerate(orders[:3]):  # Show first 3 orders
-            print(f"DEBUG: Order {i+1}: ID={order.id}, seller={order.seller_name}, status={order.status}")
     else:
-        # Regular users see: their own orders + building phase orders + closed orders they participated in
-        print("DEBUG: Loading filtered orders for regular user")
+        # Regular users see: orders they participated in + building phase orders
         orders = Order.query.filter(
             db.or_(
                 Order.creator_id == user.id,
                 Order.listings.any(Listing.user_id == user.id),
-                Order.status == 'building',
-                db.and_(Order.status == 'closed', Order.listings.any(Listing.user_id == user.id)),
-                db.and_(Order.status == 'deleted', Order.listings.any(Listing.user_id == user.id)),
-                db.and_(Order.status == 'deleted', Order.creator_id == user.id)
+                Order.status == 'building'
             )
-        ).order_by(Order.created_at.desc()).all()
-        print(f"DEBUG: User {user.id} found {len(orders)} orders")
-        for i, order in enumerate(orders[:3]):  # Show first 3 orders
-            print(f"DEBUG: Order {i+1}: ID={order.id}, seller={order.seller_name}, status={order.status}, creator={order.creator_id}")
-    
+        ).order_by(Order.created_at.desc()).all()  # Show first 3 orders
+
     orders_data = []
     for order in orders:
         user_listings_count = Listing.query.filter_by(order_id=order.id, user_id=user.id).count()
@@ -65,12 +49,8 @@ def get_orders():
             seller_info = discogs_service.fetch_seller_info(order.seller_name)
             cache_service.set(seller_info_cache_key, seller_info, expire_seconds=3600)
         
-        # Use cached inventory count (cached for 1 hour)
-        inventory_cache_key = f"seller_inventory_count_{order.seller_name}"
-        seller_inventory_count = cache_service.get(inventory_cache_key)
-        if seller_inventory_count is None:
-            seller_inventory_count = discogs_service.fetch_seller_inventory_count(order.seller_name)
-            cache_service.set(inventory_cache_key, seller_inventory_count, expire_seconds=3600)
+        # Get inventory count (automatically cached by @cache_result decorator for 15 minutes)
+        seller_inventory_count = discogs_service.fetch_seller_inventory_count(order.seller_name)
         
         # Calculate wantlist matches for the current user only
         wantlist_matches = 0
@@ -103,18 +83,15 @@ def get_orders():
         
         orders_data.append(order_data)
     
-    # Cache the entire dashboard data for 1 hour
-    print(f"DEBUG: Setting cache key: {cache_key} with {len(orders_data)} orders")
-    cache_service.set(cache_key, orders_data, expire_seconds=3600)
-    print(f"DEBUG: Cache set successfully for key: {cache_key}")
+    # Cache the entire dashboard data for 5 minutes (reduced from 1 hour for better responsiveness)
     
-    print(f"DEBUG: Returning {len(orders_data)} orders to {'admin' if user.is_admin else 'user'} {user.id}")
+    cache_service.set(cache_key, orders_data, expire_seconds=300)  # 5 minutes
+
     if orders_data:
-        print(f"DEBUG: First order data: {orders_data[0]}")
+        
         # Show all order statuses
         statuses = [order.get('status') for order in orders_data]
-        print(f"DEBUG: Order statuses: {statuses}")
-    
+
     return jsonify(orders_data)
 
 @orders_api.route('/orders/cache/clear', methods=['POST'])
@@ -132,7 +109,8 @@ def clear_dashboard_cache():
         from services.cache_service import invalidate_cache_pattern
         invalidate_cache_pattern("dashboard_orders_*")
         invalidate_cache_pattern("seller_info_*")
-        invalidate_cache_pattern("seller_inventory_count_*")
+        invalidate_cache_pattern("cache:fetch_seller_info:*")  # Clear fetch_seller_info cache
+        invalidate_cache_pattern("cache:fetch_seller_inventory_count:*")  # Clear inventory count cache
         
         return jsonify({'success': True, 'message': 'Dashboard cache cleared'})
     except Exception as e:
@@ -208,14 +186,34 @@ def update_order_status(order_id):
     if order.creator_id != current_user.id and not current_user.is_admin:
         return jsonify({'error': 'Not authorized'}), 403
     
-    valid_statuses = ['building', 'validation', 'ordered', 'delivered', 'closed']
+    # For admins, also allow 'deleted' as a valid status
+    valid_statuses = ['building', 'payment', 'transport', 'distribution']
+    if current_user.is_admin:
+        valid_statuses.append('deleted')
+    
     if new_status not in valid_statuses:
         return jsonify({'error': 'Invalid status'}), 400
     
     try:
+        old_status = order.status
         order.status = new_status
         order.status_changed_at = datetime.now(timezone.utc)
         db.session.commit()
+        
+        # Clear dashboard cache to reflect status change
+        try:
+            from services.cache_service import invalidate_cache_pattern
+            invalidate_cache_pattern("dashboard_orders_*")
+        except Exception as e:
+            pass  # Cache clear is optional, continue anyway
+
+        # Send notification about status change
+        try:
+            from services.notification_service import NotificationService
+            NotificationService.notify_status_changed(order, old_status, new_status, current_user)
+        except Exception as e:
+            pass  # Notification is optional, continue anyway
+
         return jsonify({'success': True, 'status': new_status})
     except Exception as e:
         db.session.rollback()
@@ -270,8 +268,18 @@ def update_order_settings(order_id):
         if 'paypal_link' in data:
             order.paypal_link = data['paypal_link'].strip() if data['paypal_link'] else None
         
-        if 'user_location' in data:
-            order.user_location = data['user_location'].strip() if data['user_location'] else None
+        if 'city' in data:
+            from models.user import CITY_CHOICES
+            if data['city'] and data['city'] not in CITY_CHOICES:
+                return jsonify({'error': 'Ville invalide'}), 400
+            order.city = data['city'].strip() if data['city'] else None
+        
+        if 'distribution_method' in data:
+            # Clear distribution method if city changes and is not Nantes
+            if data.get('city') and data['city'] != 'Nantes':
+                order.distribution_method = None
+            else:
+                order.distribution_method = data['distribution_method'].strip() if data['distribution_method'] else None
         
         db.session.commit()
         return jsonify({'success': True, 'message': 'Paramètres mis à jour avec succès'})
@@ -302,11 +310,9 @@ def delete_order(order_id):
                 
                 # Clear cache to reflect the permanent deletion
                 from services.cache_service import invalidate_cache_pattern
-                print(f"DEBUG: Permanently deleting order {order_id} from database")
-                invalidate_cache_pattern("dashboard_orders_*")
-                cache_service.delete(f"dashboard_orders_{current_user.id}_{current_user.is_admin}")
-                print(f"DEBUG: Cleared cache for permanent deletion")
                 
+                invalidate_cache_pattern("dashboard_orders_*")
+
                 return jsonify({'success': True, 'message': 'Commande définitivement supprimée'})
             else:
                 return jsonify({'error': 'Commande déjà supprimée'}), 400
@@ -317,11 +323,9 @@ def delete_order(order_id):
             
             # Clear cache to reflect the change
             from services.cache_service import invalidate_cache_pattern
-            print(f"DEBUG: Soft deleting order {order_id}")
-            invalidate_cache_pattern("dashboard_orders_*")
-            cache_service.delete(f"dashboard_orders_{current_user.id}_{current_user.is_admin}")
-            print(f"DEBUG: Cleared cache for soft deletion")
             
+            invalidate_cache_pattern("dashboard_orders_*")
+
             return jsonify({'success': True, 'message': 'Commande supprimée avec succès'})
     except Exception as e:
         db.session.rollback()

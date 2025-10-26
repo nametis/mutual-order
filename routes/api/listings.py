@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from models import db, Order, Listing
 from services import discogs_service, auth_service
 
@@ -57,6 +57,13 @@ def add_listing(order_id):
         db.session.add(listing)
         db.session.commit()
         
+        # Send notification about disc added
+        try:
+            from services.notification_service import NotificationService
+            NotificationService.notify_disc_added(order, listing, current_user)
+        except Exception as e:
+            pass  # Notification is optional, continue anyway
+
         # Clear dashboard cache since new listing was added
         try:
             from services import cache_service

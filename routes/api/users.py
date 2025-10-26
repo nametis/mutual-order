@@ -38,8 +38,12 @@ def update_user_profile():
                 user.profile_completed = True
         
         # Update default location if provided
-        if 'default_location' in data:
-            user.default_location = data['default_location'].strip() if data['default_location'] else None
+        if 'city' in data:
+            from models.user import CITY_CHOICES
+            city = data['city'].strip() if data['city'] else None
+            if city and city not in CITY_CHOICES:
+                return jsonify({'error': 'Ville invalide'}), 400
+            user.city = city
         
         # Update default PayPal link if provided
         if 'default_paypal_link' in data:
@@ -295,7 +299,7 @@ def add_friend():
     # Check if already friends
     existing_friendship = Friend.query.filter_by(user_id=user.id, friend_user_id=friend_user.id).first()
     if existing_friendship:
-        print(f"DEBUG: User {user.id} already has friendship with {friend_user.id}")
+        
         return jsonify({'error': 'Cet utilisateur est déjà dans vos amis'}), 400
     
     # Clean up any old requests (accepted, declined, or pending) between these users
@@ -306,14 +310,13 @@ def add_friend():
     ).all()
     
     for old_request in old_requests:
-        print(f"DEBUG: Cleaning up old request {old_request.id} (status: {old_request.status})")
+        
         db.session.delete(old_request)
     
     # Commit the cleanup
     if old_requests:
         db.session.commit()
-        print(f"DEBUG: Cleaned up {len(old_requests)} old requests")
-    
+
     # Create friend request
     friend_request = FriendRequest(
         requester_id=user.id,
@@ -364,7 +367,7 @@ def remove_friend(username):
     ).all()
     
     for old_request in old_requests:
-        print(f"DEBUG: Cleaning up old request {old_request.id} (status: {old_request.status}) during friend removal")
+        
         db.session.delete(old_request)
     
     db.session.commit()
@@ -533,6 +536,27 @@ def extract_seller_from_url(url):
     
     return None
 
+@users_api.route('/user/dark-mode', methods=['POST'])
+def toggle_dark_mode():
+    """Toggle dark mode for current user"""
+    if not auth_service.is_authenticated():
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    user = auth_service.get_current_user()
+    
+    try:
+        user.dark_mode = not user.dark_mode
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'dark_mode': user.dark_mode,
+            'message': 'Mode sombre activé' if user.dark_mode else 'Mode sombre désactivé'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 def extract_username_from_url(url):
     """Extract username from profile URL"""
     patterns = [
@@ -546,3 +570,23 @@ def extract_username_from_url(url):
             return match.group(1)
     
     return None
+
+@users_api.route('/users', methods=['GET'])
+def get_users():
+    """Get list of all users (admin only)"""
+    if not auth_service.is_authenticated():
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    user = auth_service.get_current_user()
+    if not user.is_admin:
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    try:
+        users = User.query.all()
+        return jsonify([{
+            'id': u.id,
+            'mutual_order_username': u.mutual_order_username,
+            'discogs_username': u.discogs_username
+        } for u in users])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

@@ -30,6 +30,19 @@ def create_app(config_name=None):
     # Register blueprints
     register_blueprints(app)
     
+    # Exempt API blueprints from CSRF
+    try:
+        from flask_wtf.csrf import CSRFProtect
+        from routes.api.telegram_admin import telegram_admin_api
+        from routes.api import users_api
+        csrf = app.extensions.get('csrf')
+        if csrf:
+            csrf.exempt(telegram_admin_api)
+            csrf.exempt(users_api)
+            app.logger.info("API blueprints exempted from CSRF")
+    except Exception as e:
+        app.logger.warning(f"Could not exempt API from CSRF: {e}")
+    
     # Register template helpers
     register_template_helpers(app)
     
@@ -49,6 +62,18 @@ def initialize_extensions(app):
     """Initialize Flask extensions"""
     # Initialize database
     db.init_app(app)
+    
+    # Initialize CSRF protection if enabled
+    if app.config.get('WTF_CSRF_ENABLED', False):
+        try:
+            from flask_wtf.csrf import CSRFProtect
+            csrf = CSRFProtect()
+            csrf.init_app(app)
+            app.logger.info("CSRF protection enabled")
+        except ImportError:
+            app.logger.warning("Flask-WTF not installed, CSRF protection disabled")
+        except Exception as e:
+            app.logger.error(f"Error initializing CSRF: {e}")
     
     # Create tables if they don't exist
     with app.app_context():
@@ -177,8 +202,7 @@ def register_cli_commands(app):
             print("Cache cleared!")
         else:
             print("No cache available or error clearing cache.")
-    
-    
+
     @app.cli.command()
     def create_admin():
         """Create an admin user"""
@@ -214,7 +238,6 @@ def register_cli_commands(app):
         except Exception as e:
             db.session.rollback()
             print(f"Error creating admin user: {e}")
-
 
     @app.context_processor
     def inject_user():

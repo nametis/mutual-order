@@ -56,7 +56,6 @@ class WantlistItem(db.Model):
     def __repr__(self):
         return f'<WantlistItem {self.id}: {self.title[:50]}...>'
 
-
 class WantlistReference(db.Model):
     """Model for storing references between wantlist items and seller listings"""
     id = db.Column(db.Integer, primary_key=True)

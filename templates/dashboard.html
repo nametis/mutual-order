@@ -7,6 +7,13 @@
         // Pass user data to JavaScript
         window.currentUserId = {{ current_user.id }};
         window.isAdmin = {{ 'true' if current_user.is_admin else 'false' }};
+        // Load admin mode from localStorage
+        window.adminMode = localStorage.getItem('adminMode') === 'true';
+        // If admin mode is on but user is not admin, turn it off
+        if (window.adminMode && !window.isAdmin) {
+            window.adminMode = false;
+            localStorage.setItem('adminMode', 'false');
+        }
     </script>
 {% endblock %}
 
@@ -53,29 +60,62 @@
                 <div class="flex flex-wrap gap-3 items-center">
                     <span class="text-sm font-medium text-gray-700">Filtrer par :</span>
                     
-                    <!-- Role Filter Buttons -->
-                    <div class="flex space-x-2">
-                        <button @click="toggleFilter('creator')"
-                                :class="filters.creator ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'"
-                                class="px-3 py-1 rounded-full border text-sm font-medium transition-colors">
-                            Créateur
-                        </button>
-                        <button @click="toggleFilter('participant')"
-                                :class="filters.participant ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'"
-                                class="px-3 py-1 rounded-full border text-sm font-medium transition-colors">
-                            Participant
-                        </button>
+                    <!-- City Filter Dropdown -->
+                    <div class="flex items-center space-x-2">
+                        <label class="text-sm font-medium text-gray-700">Ville :</label>
+                        <select x-model="filters.city" 
+                                @change="applyFilters()"
+                                class="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                            <option value="Paris">Paris</option>
+                            <option value="Nantes">Nantes</option>
+                            <option value="Dijon">Dijon</option>
+                            <option value="Lyon">Lyon</option>
+                            <option value="Marseille">Marseille</option>
+                            <option value="">Toutes les villes</option>
+                        </select>
                     </div>
                     
+                    <!-- Additional filters based on tab -->
+                    <template x-if="mainTab === 'all'">
+                        <div class="flex items-center space-x-2">
+                            <div class="border-l border-gray-300 h-6"></div>
+                            <span class="text-sm font-medium text-gray-700">Voir :</span>
+                            <div class="relative inline-flex rounded-lg p-1 bg-gray-100">
+                                <button @click="showMode = 'all'; applyFilters();"
+                                        :class="showMode === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'"
+                                        class="px-3 py-1 rounded-md text-sm font-medium transition-all">
+                                    Tous
+                                </button>
+                                <button @click="showMode = 'friends'; applyFilters();"
+                                        :class="showMode === 'friends' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'"
+                                        class="px-3 py-1 rounded-md text-sm font-medium transition-all">
+                                    Amis
+                                </button>
+                            </div>
+                        </div>
+                    </template>
                     
-                    <div class="border-l border-gray-300 h-6"></div>
-                    
-                    <!-- Archive Filter Button -->
-                    <button @click="toggleFilter('archived')"
-                            :class="filters.archived ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'"
-                            class="px-3 py-1 rounded-full border text-sm font-medium transition-colors">
-                        Archivées
-                    </button>
+                    <template x-if="mainTab === 'my'">
+                        <div class="flex items-center space-x-2">
+                            <div class="border-l border-gray-300 h-6"></div>
+                            <button @click="toggleFilter('creator')"
+                                    :class="filters.creator ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'"
+                                    class="px-3 py-1 rounded-full border text-sm font-medium transition-colors">
+                                Créateur
+                            </button>
+                            <button @click="toggleFilter('participant')"
+                                    :class="filters.participant ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'"
+                                    class="px-3 py-1 rounded-full border text-sm font-medium transition-colors">
+                                Participant
+                            </button>
+                            <div class="border-l border-gray-300 h-6"></div>
+                            <button @click="toggleFilter('archived')"
+                                    :class="filters.archived ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'"
+                                    class="px-3 py-1 rounded-full border text-sm font-medium transition-colors">
+                                Archivées
+                            </button>
+                        </div>
+                    </template>
                 </div>
             </div>
 
@@ -106,11 +146,24 @@
 
                                 <div class="flex-grow flex flex-col items-center justify-center text-center space-y-4 my-6">
                                     <div x-show="order.deadline" class="flex flex-col items-center">
-                                        <span class="text-xs text-gray-500">Se termine dans</span>
-                                        <div class="flex items-center text-2xl font-bold text-gray-800 space-x-2 mt-1">
-                                            <span>🕒</span>
-                                            <span x-text="calculateTimeRemaining(order.deadline)"></span>
-                                        </div>
+                                        <template x-if="order.status === 'building'">
+                                            <div>
+                                                <span class="text-xs text-gray-500">Se termine dans</span>
+                                                <div class="flex items-center text-2xl font-bold text-gray-800 space-x-2 mt-1">
+                                                    <span>🕒</span>
+                                                    <span x-text="calculateTimeRemaining(order.deadline)"></span>
+                                                </div>
+                                            </div>
+                                        </template>
+                                        <template x-if="order.status !== 'building'">
+                                            <div>
+                                                <span class="text-xs text-gray-500" x-text="getStatusDateLabel(order.status)"></span>
+                                                <div class="flex items-center text-2xl font-bold text-gray-800 space-x-2 mt-1">
+                                                    <span>📅</span>
+                                                    <span x-text="formatOrderDate(order.status_changed_at || order.created_at)"></span>
+                                                </div>
+                                            </div>
+                                        </template>
                                     </div>
                                     <div class="flex items-center space-x-4">
                                         <div class="flex items-center text-lg font-bold text-gray-800 space-x-1">
@@ -176,16 +229,36 @@
             orders: [],
             filteredOrders: [],
             mainTab: 'all',
+            showMode: 'all', // 'all' (Tous) or 'friends' (Amis)
+            friends: [],
             filters: {
+                city: '{{ current_user.city or "" }}',  // Start with user's city
                 creator: false,
                 participant: false,
-                archived: false,
+                archived: false,  // When true, show ONLY archived orders
             },
             
             async init() {
                 await this.loadOrders();
+                await this.loadFriends();
+                console.log('Initial city set to:', this.filters.city);
                 this.applyFilters();
                 this.loading = false;
+            },
+            
+            async loadFriends() {
+                try {
+                    const response = await fetch('/api/user/friends');
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.friends = data.friends || [];
+                        console.log('Loaded friends:', this.friends.length);
+                    } else {
+                        console.error('Failed to load friends:', response.status, response.statusText);
+                    }
+                } catch (error) {
+                    console.error('Error loading friends:', error);
+                }
             },
             
             
@@ -195,6 +268,8 @@
                     if (response.ok) {
                         this.orders = await response.json();
                         console.log('Loaded orders:', this.orders.length);
+                        const cityList = this.orders.map(o => ({id: o.id, city: o.city, status: o.status}));
+                        console.log('All orders with their cities:', cityList);
                         console.log('First order sample:', this.orders[0]);
                     } else {
                         console.error('Failed to load orders:', response.status, response.statusText);
@@ -244,45 +319,80 @@
                 this.applyFilters();
             },
             
+            isOrderFromFriend(order) {
+                // Check if the creator of the order is a friend
+                const friendIds = this.friends.map(f => f.friend_user_id);
+                return friendIds.includes(order.creator_id);
+            },
+            
             applyFilters() {
                 let filtered = [...this.orders];
                 const isJoined = (o) => o.is_creator || o.is_participant;
-                const isBuilding = (o) => o.status === 'building';
-                const isArchived = (o) => ['delivered', 'closed', 'deleted'].includes(o.status);
+                const isArchived = (o) => ['closed', 'deleted'].includes(o.status);
 
-                // Debug logging
-                console.log('Admin status:', window.isAdmin);
-                console.log('Total orders:', this.orders.length);
+                console.log('=== APPLYING FILTERS ===');
+                console.log('City filter:', this.filters.city);
                 console.log('Main tab:', this.mainTab);
+                console.log('Show mode:', this.showMode);
+                console.log('Total orders before filtering:', filtered.length);
 
                 // Apply main tab filter
                 if (this.mainTab === 'all') {
-                    // For admins: show all orders (already filtered server-side)
-                    // For regular users: show orders where user is involved OR building phase orders
-                    if (!window.isAdmin) {
-                        filtered = filtered.filter(o => isJoined(o) || isBuilding(o));
+                    // For "Toutes les commandes" tab
+                    // If admin mode is OFF, filter like a regular user (only building phase orders)
+                    if (window.isAdmin && !window.adminMode) {
+                        filtered = filtered.filter(o => isBuilding(o));
+                        console.log('Admin mode OFF: filtering to building phase orders only');
                     }
-                    // For admins, no additional filtering needed - show all orders from server
+                    
+                    // Apply city filter if set
+                    if (this.filters.city) {
+                        console.log('Filtering by city:', this.filters.city, 'Type:', typeof this.filters.city);
+                        const beforeCount = filtered.length;
+                        // Debug: show all unique cities in orders
+                        const uniqueCities = [...new Set(filtered.map(o => o.city))];
+                        console.log('Unique cities in orders:', uniqueCities);
+                        console.log('Sample orders:', filtered.slice(0, 3).map(o => ({id: o.id, city: o.city, cityType: typeof o.city})));
+                        
+                        filtered = filtered.filter(o => o.city === this.filters.city);
+                        console.log(`Orders filtered from ${beforeCount} to ${filtered.length}. Sample cities:`, filtered.slice(0, 3).map(o => ({id: o.id, city: o.city})));
+                    }
+                    
+                    // Apply friends filter if on "Amis" mode
+                    if (this.showMode === 'friends') {
+                        const beforeCount = filtered.length;
+                        filtered = filtered.filter(o => this.isOrderFromFriend(o));
+                        console.log(`Friends filter: ${beforeCount} to ${filtered.length} orders`);
+                    }
                 } else if (this.mainTab === 'my') {
-                    // Only orders where user is creator or participant
+                    // For "Mes Commandes" tab: only orders where user is creator or participant
                     filtered = filtered.filter(o => isJoined(o));
+                    
+                    // Apply city filter if set
+                    if (this.filters.city) {
+                        const beforeCount = filtered.length;
+                        filtered = filtered.filter(o => o.city === this.filters.city);
+                        console.log(`My orders filtered from ${beforeCount} to ${filtered.length}`);
+                    }
+                    
+                    // Apply role filters (creator OR participant - mutually exclusive)
+                    if (this.filters.creator) {
+                        filtered = filtered.filter(o => o.is_creator);
+                    } else if (this.filters.participant) {
+                        // Show orders where user is participant but NOT creator
+                        filtered = filtered.filter(o => o.is_participant && !o.is_creator);
+                    }
                 }
-
-                // Apply role filters (creator OR participant - mutually exclusive)
-                if (this.filters.creator) {
-                    filtered = filtered.filter(o => o.is_creator);
-                } else if (this.filters.participant) {
-                    // Show orders where user is participant but NOT creator
-                    filtered = filtered.filter(o => o.is_participant && !o.is_creator);
-                }
-
 
                 // Apply archive filter
                 if (this.filters.archived) {
+                    // If archived filter is ON, show ONLY archived orders
+                    const beforeCount = filtered.length;
                     filtered = filtered.filter(o => isArchived(o));
+                    console.log(`Archive filter applied: ${beforeCount} to ${filtered.length} orders`);
                 } else {
-                    // By default, hide archived orders unless specifically requested
-                    filtered = filtered.filter(o => !isArchived(o));
+                    // By default, show ALL orders (including archived)
+                    console.log('Showing all orders (including archived) by default');
                 }
 
                 // Sort orders
@@ -296,6 +406,9 @@
                 });
                 
                 this.filteredOrders = filtered;
+                console.log('=== FILTERING COMPLETE ===');
+                console.log('Final filtered orders:', this.filteredOrders.length);
+                console.log('Orders shown:', this.filteredOrders.map(o => ({id: o.id, city: o.city, status: o.status})));
             },
             
             calculateTimeRemaining(deadline) {
@@ -315,13 +428,47 @@
                 return '<1h';
             },
             
+            formatOrderDate(deadline) {
+                if (!deadline) return 'N/A';
+                
+                // Handle ISO date strings - ensure we parse as UTC and convert to local
+                let date;
+                if (deadline.includes('T') && deadline.includes('Z')) {
+                    // ISO string with Z (UTC) - parse directly
+                    date = new Date(deadline);
+                } else if (deadline.includes('T')) {
+                    // ISO string without Z - treat as UTC
+                    date = new Date(deadline + 'Z');
+                } else {
+                    // Fallback
+                    date = new Date(deadline);
+                }
+                
+                // Check if date is valid
+                if (isNaN(date.getTime())) return 'N/A';
+                
+                const day = date.getDate();
+                const month = date.getMonth() + 1; // getMonth() returns 0-11
+                
+                return `${day}/${month}`;
+            },
+            
+            getStatusDateLabel(status) {
+                const labels = {
+                    'payment': 'Paiements le',
+                    'transport': 'Commandée le',
+                    'distribution': 'Distribuée le',
+                    'deleted': 'Supprimée le'
+                };
+                return labels[status] || 'Créée le';
+            },
+            
             getStatusText(status) {
                 const texts = {
-                    'building': 'Collecte',
-                    'validation': 'Validation', 
-                    'ordered': 'Commandé',
-                    'delivered': 'Livré',
-                    'closed': 'Distribué',
+                    'building': '⛏️ Collecte',
+                    'payment': '💳 Paiements',
+                    'transport': '🚚 Transport',
+                    'distribution': '🎁 Distribution',
                     'deleted': 'Supprimé'
                 };
                 return texts[status] || status;
@@ -330,10 +477,9 @@
             getStatusClass(status) {
                 const classes = {
                     'building': 'bg-yellow-100 text-yellow-800',
-                    'validation': 'bg-blue-100 text-blue-800',
-                    'ordered': 'bg-green-100 text-green-800',
-                    'delivered': 'bg-purple-100 text-purple-800',
-                    'closed': 'bg-gray-100 text-gray-800',
+                    'payment': 'bg-blue-100 text-blue-800',
+                    'transport': 'bg-green-100 text-green-800',
+                    'distribution': 'bg-purple-100 text-purple-800',
                     'deleted': 'bg-red-100 text-red-800'
                 };
                 return classes[status] || 'bg-gray-100 text-gray-800';

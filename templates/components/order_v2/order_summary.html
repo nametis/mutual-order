@@ -12,29 +12,29 @@
     <div class="space-y-3">
         <div class="flex justify-between items-center">
             <span class="text-gray-700">Nombre de disques</span>
-            <span class="font-medium text-gray-900" x-text="order.current_user_summary ? order.current_user_summary.listings_count : 0"></span>
+            <span class="font-medium text-gray-900" x-text="(order.current_user_summary && order.current_user_summary.listings_count) ? order.current_user_summary.listings_count : 0"></span>
         </div>
         
         <div class="flex justify-between items-center">
             <span class="text-gray-700">Montant</span>
-            <span class="font-medium text-gray-900" x-text="order.current_user_summary ? order.current_user_summary.subtotal.toFixed(2) + '€' : '0.00€'"></span>
+            <span class="font-medium text-gray-900" x-text="(order.current_user_summary && order.current_user_summary.subtotal) ? order.current_user_summary.subtotal.toFixed(2) + '€' : '0.00€'"></span>
         </div>
         
         <div class="flex justify-between items-center">
             <span class="text-gray-700">Ma part Frais & Taxes</span>
-            <span class="font-medium text-gray-900" x-text="order.current_user_summary ? order.current_user_summary.fees_share.toFixed(2) + '€' : '0.00€'"></span>
+            <span class="font-medium text-gray-900" x-text="(order.current_user_summary && order.current_user_summary.fees_share) ? order.current_user_summary.fees_share.toFixed(2) + '€' : '0.00€'"></span>
         </div>
         
-        <div x-show="order.current_user_summary && order.current_user_summary.discount_share > 0" class="flex justify-between items-center">
+        <div x-show="order.current_user_summary && order.current_user_summary.discount_share && order.current_user_summary.discount_share > 0" class="flex justify-between items-center">
             <span class="text-gray-700">Ma part Discount</span>
-            <span class="font-medium text-green-600" x-text="'-' + (order.current_user_summary ? order.current_user_summary.discount_share.toFixed(2) + '€' : '0.00€')"></span>
+            <span class="font-medium text-green-600" x-text="'-' + (order.current_user_summary && order.current_user_summary.discount_share ? order.current_user_summary.discount_share.toFixed(2) + '€' : '0.00€')"></span>
         </div>
     </div>
     
     <div class="border-t border-gray-200 pt-4 mt-4">
         <div class="flex justify-between items-center">
             <span class="text-lg font-bold text-gray-900">Total</span>
-            <span class="text-lg font-bold text-gray-900" x-text="order.current_user_summary ? order.current_user_summary.total.toFixed(2) + '€' : '0.00€'"></span>
+            <span class="text-lg font-bold text-gray-900" x-text="(order.current_user_summary && order.current_user_summary.total) ? order.current_user_summary.total.toFixed(2) + '€' : '0.00€'"></span>
         </div>
     </div>
 </div>

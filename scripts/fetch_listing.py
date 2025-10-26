@@ -1,7 +1,6 @@
 import os
 import sys
 
-
 def main():
 	# Lazy import inside to ensure Flask app loads with env
 	from app import get_app
@@ -37,9 +36,6 @@ def main():
 			print(f"Error: {e}")
 			sys.exit(2)
 
-
 if __name__ == '__main__':
 	main()
-
-
 

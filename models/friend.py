@@ -21,6 +21,7 @@ class Friend(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
+            'friend_user_id': self.friend_user_id,
             'username': f"@{self.friend_user.mutual_order_username}" if self.friend_user and self.friend_user.mutual_order_username else (f"@{self.friend_user.discogs_username}" if self.friend_user else None),
             'mutual_order_username': self.friend_user.mutual_order_username if self.friend_user else None,
             'created_at': self.created_at.isoformat()

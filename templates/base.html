@@ -5,10 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}MUTUAL ORDER 0.5{% endblock %}</title>
     
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    
     <!-- CSS Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
     <link href="{{ url_for('static', filename='css/custom-responsive.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/dark-mode.css') }}" rel="stylesheet">
     
     <!-- Alpine.js Configuration -->
     <style>[x-cloak] { display: none !important; }</style>
@@ -35,5 +39,16 @@
     
     <!-- Global Scripts -->
     <script src="{{ url_for('static', filename='js/global.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notificationApp.js') }}"></script>
+    
+    <!-- Dark Mode Initialization -->
+    <script>
+        // Apply dark mode on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            {% if current_user and current_user.dark_mode %}
+                document.documentElement.classList.add('dark');
+            {% endif %}
+        });
+    </script>
 </body>
 </html>

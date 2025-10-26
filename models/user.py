@@ -1,6 +1,9 @@
 from datetime import datetime, timezone
 from . import db
 
+# Predefined cities for user selection
+CITY_CHOICES = ['Paris', 'Nantes', 'Dijon', 'Lyon', 'Marseille']
+
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     discogs_username = db.Column(db.String(80), unique=True, nullable=False, index=True)
@@ -13,8 +16,9 @@ class User(db.Model):
     last_login = db.Column(db.DateTime, nullable=True)
     
     # New profile fields for settings
-    default_location = db.Column(db.String(200), nullable=True)
+    city = db.Column(db.String(50), nullable=False)  # Mandatory city selection (dropdown)
     default_paypal_link = db.Column(db.Text, nullable=True)
+    dark_mode = db.Column(db.Boolean, default=False)
     
     # Relationships
     created_orders = db.relationship('Order', backref='creator', lazy='dynamic')
@@ -60,6 +64,6 @@ class User(db.Model):
             'is_admin': self.is_admin,
             'profile_completed': self.profile_completed,
             'created_at': self.created_at.isoformat(),
-            'default_location': self.default_location,
+            'city': self.city,
             'default_paypal_link': self.default_paypal_link
         }

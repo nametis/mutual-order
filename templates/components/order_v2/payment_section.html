@@ -1,0 +1,123 @@
+<!-- Payment Phase - Creator View -->
+<div x-show="order.status === 'payment' && isCreator" class="bg-white rounded-lg shadow p-6 mt-6">
+    <div class="mb-4">
+        <h3 class="flex items-center space-x-2 text-xl font-bold text-gray-900">
+            <span>💳</span>
+            <span>Gestion des paiements</span>
+        </h3>
+        <p class="text-sm text-gray-600 mt-1">Marquez les paiements au fur et à mesure que vous les recevez</p>
+    </div>
+
+    <!-- Payment Summary Table -->
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 border-b-2 border-gray-200">
+                <tr>
+                    <th class="text-left p-3 font-semibold text-gray-900">Utilisateur</th>
+                    <th class="text-center p-3 font-semibold text-gray-900">Nombre de disques</th>
+                    <th class="text-right p-3 font-semibold text-gray-900">Montant total</th>
+                    <th class="text-center p-3 font-semibold text-gray-900">Statut paiement</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="participant in participantSummaryData" :key="participant.user.id">
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                        <td class="p-3">
+                            <div class="flex items-center space-x-2">
+                                <a :href="'/@' + (participant.user.mutual_order_username || participant.user.username)" 
+                                   class="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                                   x-text="(participant.user.mutual_order_username ? '@' : '') + participant.user.username">
+                                </a>
+                                <span x-show="participant.user.is_creator" class="text-yellow-600">👑</span>
+                            </div>
+                        </td>
+                        <td class="p-3 text-center" x-text="participant.summary.listings_count"></td>
+                        <td class="p-3 text-right font-semibold" x-text="participant.summary.total.toFixed(2) + '€'"></td>
+                        <td class="p-3 text-center">
+                            <button @click="togglePayment(participant.user.id)"
+                                    :class="getParticipantPaymentStatus(participant.user.id) 
+                                        ? 'bg-green-600 text-white hover:bg-green-700' 
+                                        : 'bg-orange-700 bg-opacity-70 text-white hover:bg-opacity-80'"
+                                    class="px-4 py-2 rounded-lg font-normal transition-all shadow-sm"
+                                    x-text="getParticipantPaymentStatus(participant.user.id) ? '✅ Payé' : '⏳ En attente'">
+                            </button>
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Summary Footer -->
+    <div class="mt-6 grid grid-cols-2 gap-4 p-4 border-2 rounded-lg bg-gray-50" 
+         :class="getPaymentStatusCount().paid === order.participants_count ? 'border-green-500' : 'border-amber-400'">
+        <div class="text-sm font-medium text-gray-900">
+            <span>Participants:</span>
+            <span class="ml-2 font-bold" x-text="order.participants_count"></span>
+        </div>
+        <div class="text-sm font-medium text-gray-900">
+            <span>Paiements reçus:</span>
+            <span class="ml-2 font-bold" x-text="getPaymentStatusCount().paid + '/' + order.participants_count"></span>
+        </div>
+        <div class="text-sm font-medium text-gray-900">
+            <span>Montant total commande:</span>
+            <span class="ml-2 font-bold" x-text="order.total_with_fees.toFixed(2) + '€'"></span>
+        </div>
+        <div class="text-sm font-bold" 
+             :class="getPaymentStatusCount().paid === order.participants_count ? 'text-green-600' : 'text-amber-600'"
+             x-text="getPaymentStatusCount().paid === order.participants_count ? '✅ Tous les paiements reçus' : '⏳ En attente de paiements'">
+        </div>
+    </div>
+</div>
+
+<!-- Payment Phase - User View -->
+<div x-show="order.status === 'payment' && !isCreator" class="bg-white rounded-lg shadow p-6 mt-6">
+    <div class="mb-4">
+        <h3 class="flex items-center space-x-2 text-xl font-bold text-gray-900">
+            <span>💳</span>
+            <span>Votre paiement</span>
+        </h3>
+    </div>
+
+    <div class="bg-gray-50 rounded-lg p-6">
+        <div class="grid grid-cols-2 gap-4 mb-4">
+            <div>
+                <span class="text-gray-600">Nombre de disques:</span>
+                <span class="font-semibold ml-2" x-text="order.current_user_summary?.listings_count || 0"></span>
+            </div>
+            <div>
+                <span class="text-gray-600">Sous-total:</span>
+                <span class="font-semibold ml-2" x-text="order.current_user_summary?.subtotal.toFixed(2) + '€' || '0.00€'"></span>
+            </div>
+            <div>
+                <div>
+                    <span class="text-gray-600">Frais & Taxes:</span>
+                    <span class="font-semibold ml-2" x-text="order.current_user_summary?.fees_share.toFixed(2) + '€' || '0.00€'"></span>
+                </div>
+                <div class="text-xs italic text-gray-500 mt-1" 
+                     x-show="order.current_user_summary && order.current_user_summary.listings_count > 0"
+                     x-text="order.current_user_summary ? '(' + (order.current_user_summary.fees_share / order.current_user_summary.listings_count).toFixed(2) + '€ par disque)' : ''">
+                </div>
+            </div>
+            <div x-show="order.current_user_summary && order.current_user_summary.discount_share && order.current_user_summary.discount_share > 0">
+                <span class="text-gray-600">Discount:</span>
+                <span class="font-semibold text-green-600 ml-2" x-text="order.current_user_summary ? '-' + order.current_user_summary.discount_share.toFixed(2) + '€' : ''"></span>
+            </div>
+        </div>
+        
+        <div class="border-t border-gray-200 pt-4">
+            <div class="flex justify-between items-center text-lg font-bold text-gray-900">
+                <span>Total à payer:</span>
+                <span x-text="order.current_user_summary?.total.toFixed(2) + '€' || '0.00€'"></span>
+            </div>
+            <div x-show="order.paypal_link" class="mt-3">
+                <a :href="order.paypal_link" target="_blank" 
+                   class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    <span class="mr-2">💳</span>
+                    <span>Payer via PayPal</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
